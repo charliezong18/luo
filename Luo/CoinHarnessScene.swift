@@ -35,11 +35,18 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
     // MARK: - Scene construction
 
     private func buildScene() {
+        // Dark felt-table backdrop so the coin reads against it.
+        scene.background.contents = NSColor_or_UIColor(white: 0.08, alpha: 1)
         scene.rootNode.addChildNode(tableNode)
         scene.rootNode.addChildNode(coinNode)
 
         let cameraNode = SCNNode()
-        cameraNode.camera = SCNCamera()
+        let cam = SCNCamera()
+        // Scene is ~0.2 m across; the SCNCamera default zNear of 1.0 m would
+        // clip the entire scene and render a blank frame. Pull the near plane in.
+        cam.zNear = 0.001
+        cam.zFar = 10
+        cameraNode.camera = cam
         cameraNode.position = SCNVector3(0, 0.12, 0.22)
         cameraNode.eulerAngles = SCNVector3(-0.5, 0, 0)
         scene.rootNode.addChildNode(cameraNode)

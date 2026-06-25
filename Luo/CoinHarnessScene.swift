@@ -67,10 +67,20 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
     private static func makeCoinNode(params: PhysicsParams) -> SCNNode {
         let cyl = SCNCylinder(radius: CGFloat(params.coinRadius),
                               height: CGFloat(params.coinThickness))
-        // Heads = +Y face (gold-ish), Tails = -Y face (silver-ish), edge band.
-        let heads = SCNMaterial(); heads.diffuse.contents = NSColor_or_UIColor.systemYellow
-        let edge  = SCNMaterial(); edge.diffuse.contents  = NSColor_or_UIColor.systemGray
-        let tails = SCNMaterial(); tails.diffuse.contents = NSColor_or_UIColor.lightGray
+        // Brass 五帝-style coin. Heads (+Y) = bright polished brass, Tails (-Y) =
+        // darker patina brass, edge = dark brass. The brightness split keeps the
+        // two faces visually distinct (and matches the face the Settle reader picks).
+        func brass(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat, shine: CGFloat) -> SCNMaterial {
+            let m = SCNMaterial()
+            m.lightingModel = .blinn
+            m.diffuse.contents = NSColor_or_UIColor(red: r, green: g, blue: b, alpha: 1)
+            m.specular.contents = NSColor_or_UIColor(white: 1, alpha: 1)
+            m.shininess = shine
+            return m
+        }
+        let heads = brass(0.83, 0.67, 0.30, shine: 0.9)
+        let edge  = brass(0.45, 0.35, 0.14, shine: 0.5)
+        let tails = brass(0.60, 0.46, 0.18, shine: 0.6)
         cyl.materials = [edge, heads, tails]   // SCNCylinder order: side, top, bottom
 
         let node = SCNNode(geometry: cyl)
@@ -93,14 +103,38 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
     }
 
     private static func makeTableNode() -> SCNNode {
-        let plane = SCNBox(width: 0.6, height: 0.005, length: 0.6, chamferRadius: 0)
-        let mat = SCNMaterial(); mat.diffuse.contents = NSColor_or_UIColor.darkGray
-        plane.materials = [mat]
-        let node = SCNNode(geometry: plane)
-        node.position = SCNVector3(0, 0, 0)
-        let shape = SCNPhysicsShape(geometry: plane, options: nil)
-        node.physicsBody = SCNPhysicsBody(type: .static, shape: shape)
-        return node
+        let tray = SCNNode()
+
+        // Floor.
+        let floor = SCNBox(width: 0.3, height: 0.005, length: 0.3, chamferRadius: 0)
+        let felt = SCNMaterial(); felt.diffuse.contents = NSColor_or_UIColor.darkGray
+        floor.materials = [felt]
+        let floorNode = SCNNode(geometry: floor)
+        floorNode.physicsBody = SCNPhysicsBody(
+            type: .static, shape: SCNPhysicsShape(geometry: floor, options: nil))
+        tray.addChildNode(floorNode)
+
+        // Four low walls so a hard Throw can't fling the coin off the table into
+        // the void. Faint translucent rim — visible enough to read as a tray.
+        let wallMat = SCNMaterial()
+        wallMat.diffuse.contents = NSColor_or_UIColor(white: 0.5, alpha: 0.18)
+        let h: CGFloat = 0.08, t: CGFloat = 0.004, span: CGFloat = 0.3
+        let walls: [(SCNVector3, CGFloat, CGFloat)] = [
+            (SCNVector3(span/2, h/2, 0), t, span),   // +X
+            (SCNVector3(-span/2, h/2, 0), t, span),  // -X
+            (SCNVector3(0, h/2, span/2), span, t),   // +Z
+            (SCNVector3(0, h/2, -span/2), span, t),  // -Z
+        ]
+        for (pos, w, l) in walls {
+            let box = SCNBox(width: w, height: h, length: l, chamferRadius: 0)
+            box.materials = [wallMat]
+            let n = SCNNode(geometry: box)
+            n.position = pos
+            n.physicsBody = SCNPhysicsBody(
+                type: .static, shape: SCNPhysicsShape(geometry: box, options: nil))
+            tray.addChildNode(n)
+        }
+        return tray
     }
 
     // MARK: - Param sync

@@ -45,11 +45,14 @@ final class PhysicsParams: ObservableObject {
 
     // MARK: Throw impulse
     /// Vertical launch impulse magnitude (kg·m/s).
-    @Published var throwLinearImpulse: Double = 0.06
-    /// Angular impulse magnitude applied as random axis spin.
-    @Published var throwAngularImpulse: Double = 0.0015
+    /// At the default 0.01 kg mass, 0.012 ≈ 1.2 m/s up — the coin pops ~7 cm and
+    /// stays in frame. (The old 0.06 launched it at 6 m/s, ~1.8 m off-screen.)
+    @Published var throwLinearImpulse: Double = 0.012
+    /// Angular impulse magnitude applied as random axis spin. Sized to the coin's
+    /// tiny moment of inertia so it flips a few times, not thousands of rad/s.
+    @Published var throwAngularImpulse: Double = 0.00003
     /// Random horizontal scatter on launch.
-    @Published var throwHorizontalJitter: Double = 0.01
+    @Published var throwHorizontalJitter: Double = 0.003
 
     /// Reset every knob back to compile-time defaults.
     func resetToDefaults() {

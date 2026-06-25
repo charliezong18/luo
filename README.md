@@ -17,15 +17,28 @@ The Swift sources for the Harness are pre-staged in `Luo/`:
 | `MotionService.swift` | CoreMotion wrapper, fires on sustained-acceleration shake |
 | `HapticsService.swift` | CoreHaptics wrapper, settle-thunk + tumble-tick |
 
-## Setup steps (need Xcode installed first)
+## Setup — XcodeGen
 
-1. Xcode → File → New → Project → iOS → App.
-2. Product Name: `Luo`. Interface: SwiftUI. Language: Swift. Save at `~/Developer/Luo/` (overwrite the auto-created folder; the staged Swift files are already there).
-3. In Project Navigator, right-click `Luo` group → Add Files to "Luo"… → select all six `.swift` files in `Luo/` → uncheck "Copy items if needed", check the `Luo` target → Add.
-4. Delete the boilerplate `ContentView.swift` Xcode generated.
-5. Min Deployment: iOS 17 (matches iPhone 15+ per ADR-0007 Phase 2).
-6. Signing & Capabilities: add your Apple ID team.
-7. Run on real device (Simulator can't haptic; CoreMotion is also weak on Sim).
+The Xcode project is generated from `project.yml` via [XcodeGen](https://github.com/yonaskolb/XcodeGen) — no hand-built `.xcodeproj` is committed; regenerate any time. Sources live in `Luo/`.
+
+```bash
+brew install xcodegen        # once (already installed on the Mac mini)
+cd ~/Developer/luo
+xcodegen generate            # writes Luo.xcodeproj from project.yml
+open Luo.xcodeproj           # then ⌘R
+```
+
+Build + verify from CLI (no signing, Simulator):
+
+```bash
+xcodebuild -project Luo.xcodeproj -scheme Luo \
+  -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+  build CODE_SIGNING_ALLOWED=NO
+```
+
+- Min deployment **iOS 17** (iPhone 15+ per ADR-0007 Phase 2); `TARGETED_DEVICE_FAMILY=1` (iPhone only).
+- **Simulator** shows the visuals + Throw button, but haptics are silent and CoreMotion shake is weak — real-device tuning is Phase 2.
+- **Real device:** set `DEVELOPMENT_TEAM` in `project.yml` (or Xcode → Signing) to your Apple ID team, `xcodegen generate`, run.
 
 ## Phase 2 tuning loop
 

@@ -35,8 +35,9 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
     // MARK: - Scene construction
 
     private func buildScene() {
-        // Dark felt-table backdrop so the coin reads against it.
-        scene.background.contents = NSColor_or_UIColor(white: 0.08, alpha: 1)
+        // Warm near-black desk backdrop so the coin reads against it.
+        // DESIGN.md `neutral` #14110D — warm, not the cold #141414 of white:0.08.
+        scene.background.contents = NSColor_or_UIColor(red: 0.078, green: 0.067, blue: 0.051, alpha: 1)
         scene.rootNode.addChildNode(tableNode)
         scene.rootNode.addChildNode(coinNode)
 
@@ -107,7 +108,9 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
 
         // Floor.
         let floor = SCNBox(width: 0.3, height: 0.005, length: 0.3, chamferRadius: 0)
-        let felt = SCNMaterial(); felt.diffuse.contents = NSColor_or_UIColor.darkGray
+        // Warm raised-desk felt — DESIGN.md `surface-raised` #211B14, a shade up
+        // from the backdrop so the coin and its shadow read with depth.
+        let felt = SCNMaterial(); felt.diffuse.contents = NSColor_or_UIColor(red: 0.129, green: 0.106, blue: 0.078, alpha: 1)
         floor.materials = [felt]
         let floorNode = SCNNode(geometry: floor)
         floorNode.physicsBody = SCNPhysicsBody(
@@ -117,7 +120,8 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
         // Four low walls so a hard Throw can't fling the coin off the table into
         // the void. Faint translucent rim — visible enough to read as a tray.
         let wallMat = SCNMaterial()
-        wallMat.diffuse.contents = NSColor_or_UIColor(white: 0.5, alpha: 0.18)
+        // Faint warm rim — DESIGN.md `hairline` #37291A, translucent.
+        wallMat.diffuse.contents = NSColor_or_UIColor(red: 0.216, green: 0.161, blue: 0.102, alpha: 0.18)
         let h: CGFloat = 0.08, t: CGFloat = 0.004, span: CGFloat = 0.3
         let walls: [(SCNVector3, CGFloat, CGFloat)] = [
             (SCNVector3(span/2, h/2, 0), t, span),   // +X

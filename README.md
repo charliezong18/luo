@@ -2,6 +2,17 @@
 
 Native iOS divination app — physics-grade Rituals (Coin, I Ching, later Dice / Tarot / 签筒). Design source of truth lives in the 2nd Brain vault: `Hang/Plans/Divination_App/` (CONTEXT.md + ADRs 0001–0009).
 
+## Visual identity — `DESIGN.md`
+
+The visual system is specified in Google's [design.md](https://github.com/google-labs-code/design.md) format (`@google/design.md` — YAML design tokens + prose rationale). Two variants exist, both deriving the same typography/spacing/shape from the ADRs and differing only in palette:
+
+| File | Variant | Status |
+|---|---|---|
+| `DESIGN.md` | **Dusk Desk** — warm near-black desk, aged-paper ink, one cinnabar accent | **active default** (matches the dark SceneKit scene) |
+| `DESIGN-paper.md` | **Rice Paper** — warm 宣纸 cream, ground-ink type, deep cinnabar seal | parked alternative |
+
+The dark/light choice is **deliberately deferred to Phase 2** (real device, judged in the hand). Both pass `npx @google/design.md lint <file>` clean. Validate any token edit with the lint CLI before committing.
+
 ## Current state — Phase 0/1 staging
 
 Per [ADR-0007](../../Library/CloudStorage/GoogleDrive-charliezong18@gmail.com/My%20Drive/2nd%20Brain/Hang/Plans/Divination_App/docs/adr/0007-build-cadence-coin-harness-then-iching.md), the first thing built is a *Coin Harness* — a deliberately ugly SceneKit + CoreMotion + CoreHaptics rig used to tune Settle feel on a single-coin primitive. The Harness is throwaway; only the converged physics constants survive into v1.

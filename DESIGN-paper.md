@@ -99,6 +99,8 @@ components:
     height: 1px
 ---
 
+> 🌐 中文阅读版:[`DESIGN-paper.zh.md`](DESIGN-paper.zh.md)（token 以本文件为准）
+
 ## Overview
 
 落 (Luò) is the moment objects come to rest — the Settle that ends every Ritual. The visual identity exists to disappear behind that moment. This is the light reading of that idea: not a desk at dusk but a sheet of 宣纸 (rice paper) laid flat under daylight. The surface is a warm, fibrous cream; type is the color of ground ink pressed into it; and there is exactly one chromatic accent — a deep cinnabar, the red of a 卦师's seal stamped onto the page — spent only on the one action a screen is actually for.

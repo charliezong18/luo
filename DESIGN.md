@@ -99,6 +99,8 @@ components:
     height: 1px
 ---
 
+> 🌐 中文阅读版:[`DESIGN.zh.md`](DESIGN.zh.md)（token 以本文件为准）
+
 ## Overview
 
 落 (Luò) is the moment objects come to rest — the Settle that ends every Ritual. The visual identity exists to disappear behind that moment. Nothing on screen should compete with the desk, the throw, or the result the objects produced. The whole surface reads like a lacquered wood desk seen at dusk: warm, near-black, lit by a single low lamp. Type is the color of aged paper under that lamp. There is exactly one chromatic accent — an earthen cinnabar, the red of a 卦师's seal — and it is spent only on the one action a screen is actually for.

@@ -7,6 +7,15 @@ import simd
 @MainActor
 final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
 
+    /// SceneKit's physics (PhysX) is tuned for ~metre-scale objects; a real
+    /// 1.4 cm coin sits far below its stable regime, so fixed-size collision
+    /// margins overlap at spawn and the solver flings the coin up and jitters
+    /// instead of resting. We model the whole scene `scale`× larger (coin ≈ 0.35 m)
+    /// and frame it with the camera. `PhysicsParams` stays in real-world units;
+    /// every length is multiplied by `scale` here, and gravity / impulses are
+    /// scaled to match so timing and flip-count are preserved (see ADR notes).
+    static let scale: Double = 25
+
     let scene = SCNScene()
     private let coinNode: SCNNode
     private let tableNode: SCNNode
@@ -18,6 +27,10 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
     // Settle tracker
     private var belowThresholdSince: TimeInterval?
     private var currentState: SettleState = .idle
+    // Previous-frame presentation state, for velocity-free stillness detection.
+    private var lastPos: simd_float3?
+    private var lastQuat: simd_quatf?
+    private var lastTickTime: TimeInterval?
 
     init(params: PhysicsParams,
          onSettle: @escaping (CoinFace) -> Void,
@@ -41,21 +54,20 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
         scene.rootNode.addChildNode(tableNode)
         scene.rootNode.addChildNode(coinNode)
 
+        let s = CGFloat(Self.scale)
         let cameraNode = SCNNode()
         let cam = SCNCamera()
-        // Scene is ~0.2 m across; the SCNCamera default zNear of 1.0 m would
-        // clip the entire scene and render a blank frame. Pull the near plane in.
-        cam.zNear = 0.001
-        cam.zFar = 10
+        cam.zNear = 0.01
+        cam.zFar = 10 * Double(s)
         cameraNode.camera = cam
-        cameraNode.position = SCNVector3(0, 0.12, 0.22)
+        cameraNode.position = SCNVector3(0, 0.12 * s, 0.22 * s)
         cameraNode.eulerAngles = SCNVector3(-0.5, 0, 0)
         scene.rootNode.addChildNode(cameraNode)
 
         let light = SCNNode()
         light.light = SCNLight()
         light.light?.type = .omni
-        light.position = SCNVector3(0.1, 0.4, 0.2)
+        light.position = SCNVector3(0.1 * s, 0.4 * s, 0.2 * s)
         scene.rootNode.addChildNode(light)
 
         let ambient = SCNNode()
@@ -65,9 +77,17 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
         scene.rootNode.addChildNode(ambient)
     }
 
+    /// Resting Y for the coin, in scaled scene units: floor top (box centered at
+    /// 0, height 0.005 → top at +0.0025) plus half the coin's thickness, plus a
+    /// hair of clearance so it drops a fraction of a mm and settles instead of
+    /// spawning interpenetrating.
+    private static func restY(_ p: PhysicsParams) -> Double {
+        (0.0025 + p.coinThickness / 2 + 0.0002) * scale
+    }
+
     private static func makeCoinNode(params: PhysicsParams) -> SCNNode {
-        let cyl = SCNCylinder(radius: CGFloat(params.coinRadius),
-                              height: CGFloat(params.coinThickness))
+        let cyl = SCNCylinder(radius: CGFloat(params.coinRadius * scale),
+                              height: CGFloat(params.coinThickness * scale))
         // Brass 五帝-style coin. Heads (+Y) = bright polished brass, Tails (-Y) =
         // darker patina brass, edge = dark brass. The brightness split keeps the
         // two faces visually distinct (and matches the face the Settle reader picks).
@@ -86,10 +106,10 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
 
         let node = SCNNode(geometry: cyl)
         node.name = "coin"
-        node.position = SCNVector3(0, 0.05, 0)
+        node.position = SCNVector3(0, CGFloat(Self.restY(params)), 0)
 
         let shape = SCNPhysicsShape(geometry: cyl, options: [
-            SCNPhysicsShape.Option.type: SCNPhysicsShape.ShapeType.convexHull.rawValue
+            SCNPhysicsShape.Option.type: SCNPhysicsShape.ShapeType.boundingBox.rawValue
         ])
         let body = SCNPhysicsBody(type: .dynamic, shape: shape)
         body.mass = CGFloat(params.coinMass)
@@ -106,8 +126,10 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
     private static func makeTableNode() -> SCNNode {
         let tray = SCNNode()
 
+        let s = CGFloat(scale)
+
         // Floor.
-        let floor = SCNBox(width: 0.3, height: 0.005, length: 0.3, chamferRadius: 0)
+        let floor = SCNBox(width: 0.3 * s, height: 0.005 * s, length: 0.3 * s, chamferRadius: 0)
         // Warm raised-desk felt — DESIGN.md `surface-raised` #211B14, a shade up
         // from the backdrop so the coin and its shadow read with depth.
         let felt = SCNMaterial(); felt.diffuse.contents = NSColor_or_UIColor(red: 0.129, green: 0.106, blue: 0.078, alpha: 1)
@@ -122,7 +144,7 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
         let wallMat = SCNMaterial()
         // Faint warm rim — DESIGN.md `hairline` #37291A, translucent.
         wallMat.diffuse.contents = NSColor_or_UIColor(red: 0.216, green: 0.161, blue: 0.102, alpha: 0.18)
-        let h: CGFloat = 0.08, t: CGFloat = 0.004, span: CGFloat = 0.3
+        let h: CGFloat = 0.08 * s, t: CGFloat = 0.004 * s, span: CGFloat = 0.3 * s
         let walls: [(SCNVector3, CGFloat, CGFloat)] = [
             (SCNVector3(span/2, h/2, 0), t, span),   // +X
             (SCNVector3(-span/2, h/2, 0), t, span),  // -X
@@ -146,6 +168,10 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
     /// Re-apply params to physics bodies and world. Called when sliders move.
     func applyWorldParams() {
         guard let p = params else { return }
+        // Gravity stays at its real value (NOT scaled with lengths): a scaled-up
+        // coin under normal gravity falls slow and floaty, which keeps PhysX in a
+        // stable regime (high gravity × a 1/60 s step tunnels the coin through the
+        // floor) and gives the throw long hang time to show its tumble.
         scene.physicsWorld.gravity = SCNVector3(0, -CGFloat(p.gravity), 0)
         if let body = coinNode.physicsBody {
             body.mass = CGFloat(p.coinMass)
@@ -157,44 +183,48 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
         }
         // Geometry resize: rebuild cylinder if radius/thickness changed appreciably.
         if let cyl = coinNode.geometry as? SCNCylinder {
-            cyl.radius = CGFloat(p.coinRadius)
-            cyl.height = CGFloat(p.coinThickness)
+            cyl.radius = CGFloat(p.coinRadius * Self.scale)
+            cyl.height = CGFloat(p.coinThickness * Self.scale)
         }
     }
 
     // MARK: - Actions
 
     func reset() {
-        guard let body = coinNode.physicsBody else { return }
+        guard let p = params, let body = coinNode.physicsBody else { return }
         body.clearAllForces()
         body.velocity = SCNVector3Zero
         body.angularVelocity = SCNVector4Zero
-        coinNode.position = SCNVector3(0, 0.05, 0)
+        coinNode.position = SCNVector3(0, CGFloat(Self.restY(p)), 0)
         coinNode.eulerAngles = SCNVector3Zero
+        // Sync the physics body to the teleported node. Without this the body
+        // keeps its old transform, so the next impulse is applied in a stale
+        // frame — the coin pops weakly and barely rotates.
+        body.resetTransform()
         belowThresholdSince = nil
         publishState(.idle)
     }
 
-    /// Launch the coin straight up with random spin + jitter.
+    /// Flick the coin up from its rim — like nudging it off your thumb — so the
+    /// off-center lift becomes torque (τ = r × F) and the coin tumbles
+    /// face-over-face instead of popping straight up.
     func performThrow() {
         guard let p = params, let body = coinNode.physicsBody else { return }
         reset()
         let jitter = Double.random(in: -p.throwHorizontalJitter...p.throwHorizontalJitter)
         let jitter2 = Double.random(in: -p.throwHorizontalJitter...p.throwHorizontalJitter)
-        let impulse = SCNVector3(CGFloat(jitter),
-                                 CGFloat(p.throwLinearImpulse),
-                                 CGFloat(jitter2))
-        body.applyForce(impulse, asImpulse: true)
-        let ax = Double.random(in: -1...1)
-        let ay = Double.random(in: -1...1)
-        let az = Double.random(in: -1...1)
-        let norm = sqrt(ax*ax + ay*ay + az*az)
-        let nx = ax / norm, ny = ay / norm, nz = az / norm
-        let torque = SCNVector4(CGFloat(nx),
-                                CGFloat(ny),
-                                CGFloat(nz),
-                                CGFloat(p.throwAngularImpulse))
-        body.applyTorque(torque, asImpulse: true)
+        let lift = SCNVector3(CGFloat(jitter),
+                              CGFloat(p.throwLinearImpulse),
+                              CGFloat(jitter2))
+        body.applyForce(lift, asImpulse: true)
+        // Thumb-flick tumble: spin about a random HORIZONTAL axis so the coin
+        // flips face-over-face (not an in-plane twirl). Magnitude is sized to the
+        // scaled coin's moment of inertia (≈3e-4), so this is much larger than the
+        // old unscaled value.
+        let theta = Double.random(in: 0 ..< 2 * Double.pi)
+        let twist = SCNVector4(CGFloat(cos(theta)), 0, CGFloat(sin(theta)),
+                               CGFloat(p.throwAngularImpulse))
+        body.applyTorque(twist, asImpulse: true)
         publishState(.throwing)
     }
 
@@ -213,17 +243,30 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
     }
 
     private func tickSettle(time: TimeInterval) {
-        guard let p = params, let body = coinNode.physicsBody else { return }
-        let v = body.velocity
-        let w = body.angularVelocity
-        let linSpeed = sqrt(Double(v.x*v.x + v.y*v.y + v.z*v.z))
-        // SCNVector4 angularVelocity: (axis.xyz, magnitude in w).
-        let angSpeed = abs(Double(w.w))
+        guard let p = params else { return }
+        // SceneKit's SwiftUI SceneView does not report physics-body velocity here
+        // (it reads 0 even mid-flight), so we measure stillness from frame-to-frame
+        // change in the *presentation* transform instead.
+        let pres = coinNode.presentation
+        let pos = pres.simdWorldTransform.columns.3
+        let posV = simd_float3(pos.x, pos.y, pos.z)
+        let quat = pres.simdOrientation
+        defer { lastPos = posV; lastQuat = quat; lastTickTime = time }
+        guard let lp = lastPos, let lq = lastQuat, let lt = lastTickTime, time > lt else { return }
+        let dt = Float(time - lt)
+        // Linear speed in real m/s (positions are in scene units, scale× larger).
+        let linSpeed = Double(simd_length(posV - lp) / dt) / Self.scale
+        // Angular speed: angle between successive orientations, per second.
+        let dotq = min(1, abs(simd_dot(quat.vector, lq.vector)))
+        let angSpeed = Double(2 * acos(dotq) / dt)
         let still = linSpeed < p.settleLinearThreshold && angSpeed < p.settleAngularThreshold
 
-        if still {
+        // Only settle after a Throw — an untouched coin sitting at idle must not
+        // spuriously fire a reading.
+        let inFlight = currentState == .throwing || currentState == .settling
+        if still && inFlight {
             if let since = belowThresholdSince {
-                if time - since >= p.settleHoldSeconds, !isSettledState(currentState) {
+                if time - since >= p.settleHoldSeconds {
                     let face = readFace()
                     publishState(.settled(face))
                     onSettle(face)
@@ -232,7 +275,7 @@ final class CoinHarnessScene: NSObject, ObservableObject, SCNSceneRendererDelega
                 belowThresholdSince = time
                 if currentState == .throwing { publishState(.settling) }
             }
-        } else {
+        } else if !still {
             belowThresholdSince = nil
             if isSettledState(currentState) { publishState(.throwing) }
         }

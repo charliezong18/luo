@@ -102,12 +102,12 @@ struct HarnessView: View {
             }
             Section("Settle detector") {
                 slider("lin threshold (m/s)", $params.settleLinearThreshold, 0.001...0.2, format: "%.3f")
-                slider("ang threshold (rad/s)", $params.settleAngularThreshold, 0.01...2, format: "%.2f")
+                slider("ang threshold (rad/s)", $params.settleAngularThreshold, 0.1...4, format: "%.2f")
                 slider("hold seconds", $params.settleHoldSeconds, 0.05...1.0, format: "%.2f")
             }
             Section("Throw") {
                 slider("linear impulse", $params.throwLinearImpulse, 0.005...0.5, format: "%.3f")
-                slider("angular impulse", $params.throwAngularImpulse, 0.0001...0.02, format: "%.4f")
+                slider("angular impulse", $params.throwAngularImpulse, 0...0.12, format: "%.3f")
                 slider("h jitter", $params.throwHorizontalJitter, 0...0.05, format: "%.3f")
             }
         }

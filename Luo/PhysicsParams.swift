@@ -38,19 +38,21 @@ final class PhysicsParams: ObservableObject {
     // MARK: Settle detector
     /// Linear speed (m/s) below which the coin counts as "stilling".
     @Published var settleLinearThreshold: Double = 0.02
-    /// Angular speed (rad/s) below which the coin counts as "stilling".
-    @Published var settleAngularThreshold: Double = 0.2
+    /// Angular speed (rad/s) below which the coin counts as "stilling". The
+    /// stillness estimate comes from frame-to-frame orientation deltas, which
+    /// carry ~1 rad/s of noise even at rest, so this sits above that floor.
+    @Published var settleAngularThreshold: Double = 1.5
     /// Seconds the coin must stay below both thresholds before Settle fires.
     @Published var settleHoldSeconds: Double = 0.25
 
     // MARK: Throw impulse
-    /// Vertical launch impulse magnitude (kg·m/s).
-    /// At the default 0.01 kg mass, 0.012 ≈ 1.2 m/s up — the coin pops ~7 cm and
-    /// stays in frame. (The old 0.06 launched it at 6 m/s, ~1.8 m off-screen.)
-    @Published var throwLinearImpulse: Double = 0.012
-    /// Angular impulse magnitude applied as random axis spin. Sized to the coin's
-    /// tiny moment of inertia so it flips a few times, not thousands of rad/s.
-    @Published var throwAngularImpulse: Double = 0.00003
+    /// Vertical launch impulse magnitude (kg·m/s). Sets hang time — higher = the
+    /// coin rises further and has more air time to tumble before it lands.
+    @Published var throwLinearImpulse: Double = 0.02
+    /// Tumble strength: angular impulse about a random HORIZONTAL axis, so the
+    /// coin flips face-over-face like a flicked coin. Sized to the scaled coin's
+    /// moment of inertia (≈3e-4) — at 0.025 it turns a few times over the arc.
+    @Published var throwAngularImpulse: Double = 0.025
     /// Random horizontal scatter on launch.
     @Published var throwHorizontalJitter: Double = 0.003
 

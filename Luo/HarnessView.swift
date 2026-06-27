@@ -9,7 +9,7 @@ struct HarnessView: View {
     @StateObject private var params = PhysicsParams()
     @StateObject private var motion = MotionService()
     @State private var settleState: SettleState = .idle
-    @State private var scene: CoinHarnessScene?
+    @State private var scene: PhysicsScene?
     private let haptics = HapticsService()
 
     var body: some View {
@@ -21,15 +21,15 @@ struct HarnessView: View {
             slidersList
         }
         .onAppear { ensureScene() }
-        .onChange(of: params.coinMass) { _, _ in scene?.applyWorldParams() }
-        .onChange(of: params.coinRadius) { _, _ in scene?.applyWorldParams() }
-        .onChange(of: params.coinThickness) { _, _ in scene?.applyWorldParams() }
-        .onChange(of: params.gravity) { _, _ in scene?.applyWorldParams() }
-        .onChange(of: params.restitution) { _, _ in scene?.applyWorldParams() }
-        .onChange(of: params.friction) { _, _ in scene?.applyWorldParams() }
-        .onChange(of: params.rollingFriction) { _, _ in scene?.applyWorldParams() }
-        .onChange(of: params.linearDamping) { _, _ in scene?.applyWorldParams() }
-        .onChange(of: params.angularDamping) { _, _ in scene?.applyWorldParams() }
+        .onChange(of: params.coinMass) { _, _ in scene?.apply(params.makeConfig()) }
+        .onChange(of: params.coinRadius) { _, _ in scene?.apply(params.makeConfig()) }
+        .onChange(of: params.coinThickness) { _, _ in scene?.apply(params.makeConfig()) }
+        .onChange(of: params.gravity) { _, _ in scene?.apply(params.makeConfig()) }
+        .onChange(of: params.restitution) { _, _ in scene?.apply(params.makeConfig()) }
+        .onChange(of: params.friction) { _, _ in scene?.apply(params.makeConfig()) }
+        .onChange(of: params.rollingFriction) { _, _ in scene?.apply(params.makeConfig()) }
+        .onChange(of: params.linearDamping) { _, _ in scene?.apply(params.makeConfig()) }
+        .onChange(of: params.angularDamping) { _, _ in scene?.apply(params.makeConfig()) }
     }
 
     // MARK: - Sub-views
@@ -148,8 +148,8 @@ struct HarnessView: View {
 
     private func ensureScene() {
         guard scene == nil else { return }
-        scene = CoinHarnessScene(
-            params: params,
+        scene = PhysicsScene(
+            config: params.makeConfig(),
             onSettle: { _ in haptics.playSettleThunk() },
             onStateChange: { newState in
                 Task { @MainActor in settleState = newState }

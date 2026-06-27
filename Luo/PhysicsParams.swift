@@ -75,34 +75,28 @@ final class PhysicsParams: ObservableObject {
         throwAngularImpulse = fresh.throwAngularImpulse
         throwHorizontalJitter = fresh.throwHorizontalJitter
     }
-}
 
-/// Result of a single Throw — the Settle face that the coin landed on.
-enum CoinFace: String {
-    case heads, tails, edge
-
-    var label: String {
-        switch self {
-        case .heads: return "H"
-        case .tails: return "T"
-        case .edge:  return "edge"
-        }
-    }
-}
-
-/// Live Settle state the UI shows above the sliders.
-enum SettleState: Equatable {
-    case idle
-    case throwing
-    case settling
-    case settled(CoinFace)
-
-    var label: String {
-        switch self {
-        case .idle:           return "ready"
-        case .throwing:       return "thrown"
-        case .settling:       return "settling…"
-        case .settled(let f): return "Settled · \(f.label)"
-        }
+    /// Snapshot the live sliders into the value-type `PhysicsConfig` that
+    /// `PhysicsScene` runs on. `settleTimeout` isn't a slider — it keeps the
+    /// `PhysicsConfig` default. This is the bridge from the throwaway tuning
+    /// surface to the production scene.
+    func makeConfig() -> PhysicsConfig {
+        PhysicsConfig(
+            coinMass: coinMass,
+            coinRadius: coinRadius,
+            coinThickness: coinThickness,
+            gravity: gravity,
+            restitution: restitution,
+            friction: friction,
+            rollingFriction: rollingFriction,
+            linearDamping: linearDamping,
+            angularDamping: angularDamping,
+            settleLinearThreshold: settleLinearThreshold,
+            settleAngularThreshold: settleAngularThreshold,
+            settleHoldSeconds: settleHoldSeconds,
+            throwLinearImpulse: throwLinearImpulse,
+            throwAngularImpulse: throwAngularImpulse,
+            throwHorizontalJitter: throwHorizontalJitter
+        )
     }
 }

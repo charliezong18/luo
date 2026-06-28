@@ -22,6 +22,12 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
     /// coin under normal gravity falls slow and stable); impulses are real too.
     static let scale: Double = 25
 
+    /// PhysX holds the resting body a fixed contact margin above the floor
+    /// (~0.04 scaled units with the boundingBox shape). We lower the *visual*
+    /// coin by this much inside its physics node so it appears to sit on the
+    /// felt; during flight the offset is along the coin's own axis and invisible.
+    static let contactGap: Double = 0.04
+
     let scene = SCNScene()
     private let coinNode: SCNNode
     private let tableNode: SCNNode
@@ -71,17 +77,36 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         cameraNode.eulerAngles = SCNVector3(-0.5, 0, 0)
         scene.rootNode.addChildNode(cameraNode)
 
+        // Soft omni fill, kept modest so it doesn't wash out the key light's shadow.
         let light = SCNNode()
         light.light = SCNLight()
         light.light?.type = .omni
+        light.light?.intensity = 350
         light.position = SCNVector3(0.1 * s, 0.4 * s, 0.2 * s)
         scene.rootNode.addChildNode(light)
 
+        // Low ambient so the shadowed felt actually darkens (ambient fills shadows).
         let ambient = SCNNode()
         ambient.light = SCNLight()
         ambient.light?.type = .ambient
-        ambient.light?.intensity = 300
+        ambient.light?.intensity = 150
         scene.rootNode.addChildNode(ambient)
+
+        // Key light low from the front-right, so the contact shadow stretches back-
+        // left across the felt where the camera can see it (not hidden under the
+        // thin coin), reading the coin as grounded.
+        let key = SCNNode()
+        let keyLight = SCNLight()
+        keyLight.type = .directional
+        keyLight.intensity = 1000
+        keyLight.castsShadow = true
+        keyLight.shadowMode = .forward
+        keyLight.shadowSampleCount = 16
+        keyLight.shadowRadius = 5
+        keyLight.shadowColor = NSColor_or_UIColor(white: 0, alpha: 0.75)
+        key.light = keyLight
+        key.eulerAngles = SCNVector3(-0.6, 0.6, 0)   // ~34° above horizon, yaw right
+        scene.rootNode.addChildNode(key)
     }
 
     /// Resting Y for the coin, in scaled scene units: floor top (box centered at
@@ -111,9 +136,16 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         let tails = brass(0.60, 0.46, 0.18, shine: 0.6)
         cyl.materials = [edge, heads, tails]   // SCNCylinder order: side, top, bottom
 
-        let node = SCNNode(geometry: cyl)
+        // Visual lives in a child lowered by the contact gap so the coin reads as
+        // resting on the felt; the parent node carries the physics body.
+        let visual = SCNNode(geometry: cyl)
+        visual.name = "coinVisual"
+        visual.position = SCNVector3(0, -CGFloat(contactGap), 0)
+
+        let node = SCNNode()
         node.name = "coin"
         node.position = SCNVector3(0, CGFloat(Self.restY(c)), 0)
+        node.addChildNode(visual)
 
         let shape = SCNPhysicsShape(geometry: cyl, options: [
             SCNPhysicsShape.Option.type: SCNPhysicsShape.ShapeType.boundingBox.rawValue
@@ -190,7 +222,8 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
             body.damping = CGFloat(config.linearDamping)
             body.angularDamping = CGFloat(config.angularDamping)
         }
-        if let cyl = coinNode.geometry as? SCNCylinder {
+        if let cyl = coinNode.childNode(withName: "coinVisual", recursively: false)?
+            .geometry as? SCNCylinder {
             cyl.radius = CGFloat(config.coinRadius * Self.scale)
             cyl.height = CGFloat(config.coinThickness * Self.scale)
         }

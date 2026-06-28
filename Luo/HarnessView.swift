@@ -39,7 +39,7 @@ struct HarnessView: View {
             if let scene {
                 SceneView(
                     scene: scene.scene,
-                    options: [.allowsCameraControl, .autoenablesDefaultLighting],
+                    options: [.allowsCameraControl],
                     delegate: scene
                 )
             } else {

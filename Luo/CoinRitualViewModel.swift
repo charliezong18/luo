@@ -1,0 +1,68 @@
+import SwiftUI
+import SceneKit
+
+/// Ritual semantics for a single coin. Heads → 阳, tails → 阴 (edge can't happen
+/// on a flat tray; folded into 阳). Kept in the VM layer so PhysicsScene /
+/// ThrowResult stay free of divination meaning.
+enum Yinyang: Equatable {
+    case yang, yin
+
+    init(_ face: CoinFace) { self = (face == .tails) ? .yin : .yang }
+
+    var glyph: String { self == .yang ? "阳" : "阴" }
+    var reading: String { self == .yang ? "是" : "否" }
+}
+
+/// What the Coin Ritual screen is showing.
+enum CoinCastState: Equatable {
+    case idle                 // ready; hint + 掷
+    case casting              // coin in flight; button disabled
+    case result(Yinyang)      // settled; 阳/阴 revealed; button → 再掷
+}
+
+@MainActor
+final class CoinRitualViewModel: ObservableObject {
+    @Published private(set) var state: CoinCastState = .idle
+    @Published private(set) var hasCast = false
+
+    private let haptics = HapticsService()
+    private let motion = MotionService()
+
+    /// Lazy so the escaping callbacks can capture a fully-initialized self.
+    lazy var scene: PhysicsScene = PhysicsScene(
+        config: .v1,
+        onSettle: { [weak self] result in self?.handleSettle(result) },
+        onStateChange: { [weak self] s in self?.handleStateChange(s) }
+    )
+
+    /// Throw the coin (tap button or shake).
+    func cast() {
+        scene.performThrow()
+        state = .casting
+    }
+
+    /// Start/stop device-shake casting (no-op in simulator).
+    func startMotion() {
+        motion.start { [weak self] mag in self?.scene.applyShake(magnitude: mag) }
+    }
+    func stopMotion() { motion.stop() }
+
+    // MARK: - PhysicsScene callbacks
+
+    private func handleSettle(_ result: ThrowResult) {
+        haptics.playSettleThunk()
+        state = .result(Yinyang(result.faceUp))
+        hasCast = true
+    }
+
+    private func handleStateChange(_ s: SettleState) {
+        // The settled face arrives via handleSettle; here we only keep `.casting`
+        // alive while the coin is in motion. Ignore .idle/.settled.
+        switch s {
+        case .throwing, .settling:
+            if state != .casting { state = .casting }
+        case .idle, .settled:
+            break
+        }
+    }
+}

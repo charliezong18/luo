@@ -4,7 +4,7 @@ import SwiftUI
 struct LuoApp: App {
     var body: some Scene {
         WindowGroup {
-            HarnessView()
+            CoinRitualView()
         }
     }
 }

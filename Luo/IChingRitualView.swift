@@ -54,14 +54,14 @@ struct IChingRitualView: View {
     /// (throw 1 … throw 6), small and dim, sitting just under the hint at the top
     /// so it never overlaps the coins in the center. 动爻 tinted cinnabar.
     private var tallyRow: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             ForEach(Array(vm.castYao.enumerated()), id: \.offset) { _, yao in
                 Text(yao.glyph)
-                    .font(Theme.serif(17))
-                    .foregroundColor((yao.isChanging ? Theme.cinnabar : Theme.ink).opacity(0.5))
+                    .font(Theme.serif(28))
+                    .foregroundColor((yao.isChanging ? Theme.cinnabar : Theme.ink).opacity(0.7))
             }
         }
-        .frame(height: 22)
+        .frame(height: 34)
         .padding(.top, 6)
     }
 

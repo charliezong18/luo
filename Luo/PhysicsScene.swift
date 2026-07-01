@@ -304,7 +304,7 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
     private func tickSettle(time: TimeInterval) {
         guard !coinNodes.isEmpty else { return }
         var allStill = true
-        var haveHistory = lastTickTime != nil
+        let haveHistory = lastTickTime != nil
         let dt = Float(time - (lastTickTime ?? time))
 
         for (i, coinNode) in coinNodes.enumerated() {

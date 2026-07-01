@@ -30,3 +30,24 @@ targets:
         # team here (or in Xcode → Signing) before running on a real device.
         DEVELOPMENT_TEAM: ""
         CODE_SIGN_STYLE: Automatic
+
+  LuoTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: LuoTests
+    dependencies:
+      - target: Luo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.charliezong.luoTests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  Luo:
+    build:
+      targets:
+        Luo: all
+    test:
+      targets:
+        - LuoTests

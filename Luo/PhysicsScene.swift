@@ -29,31 +29,39 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
     static let contactGap: Double = 0.04
 
     let scene = SCNScene()
-    private let coinNode: SCNNode
+    private var coinNodes: [SCNNode] = []
     private let tableNode: SCNNode
 
     private var config: PhysicsConfig
-    private let onSettle: (ThrowResult) -> Void
+    private let onSettle: ([ThrowResult]) -> Void
     private let onStateChange: (SettleState) -> Void
 
-    // Settle tracker
+    // Settle tracker (all coins must be still).
     private var belowThresholdSince: TimeInterval?
     private var throwStartTime: TimeInterval?
     private var currentState: SettleState = .idle
-    // Previous-frame presentation state, for velocity-free stillness detection.
-    private var lastPos: simd_float3?
-    private var lastQuat: simd_quatf?
+    // Per-coin previous-frame presentation state, for velocity-free stillness.
+    private var lastPos: [simd_float3?] = []
+    private var lastQuat: [simd_quatf?] = []
     private var lastTickTime: TimeInterval?
 
     init(config: PhysicsConfig,
-         onSettle: @escaping (ThrowResult) -> Void,
+         onSettle: @escaping ([ThrowResult]) -> Void,
          onStateChange: @escaping (SettleState) -> Void) {
         self.config = config
         self.onSettle = onSettle
         self.onStateChange = onStateChange
-        self.coinNode = Self.makeCoinNode(config: config)
         self.tableNode = Self.makeTableNode()
         super.init()
+        let count = max(1, config.coinCount)
+        for i in 0..<count {
+            let node = Self.makeCoinNode(config: config)
+            node.name = "coin\(i)"
+            node.position = Self.spawnPosition(config, index: i)
+            coinNodes.append(node)
+        }
+        lastPos = Array(repeating: nil, count: count)
+        lastQuat = Array(repeating: nil, count: count)
         buildScene()
         apply(config)
     }
@@ -65,7 +73,7 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         // DESIGN.md `neutral` #14110D — warm, not the cold #141414 of white:0.08.
         scene.background.contents = NSColor_or_UIColor(red: 0.078, green: 0.067, blue: 0.051, alpha: 1)
         scene.rootNode.addChildNode(tableNode)
-        scene.rootNode.addChildNode(coinNode)
+        for node in coinNodes { scene.rootNode.addChildNode(node) }
 
         let s = CGFloat(Self.scale)
         let cameraNode = SCNNode()
@@ -115,6 +123,15 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
     /// spawning interpenetrating.
     private static func restY(_ c: PhysicsConfig) -> Double {
         (0.0025 + c.coinThickness / 2 + 0.0002) * scale
+    }
+
+    /// Rest position for coin `index`, in scaled scene units. Uses the config's
+    /// spawn offset (x,z, real units) if present, else the origin.
+    private static func spawnPosition(_ c: PhysicsConfig, index: Int) -> SCNVector3 {
+        let off = index < c.spawnOffsets.count ? c.spawnOffsets[index] : SIMD3<Double>(0, 0, 0)
+        return SCNVector3(CGFloat(off.x * scale),
+                          CGFloat(restY(c)),
+                          CGFloat(off.z * scale))
     }
 
     private static func makeCoinNode(config c: PhysicsConfig) -> SCNNode {
@@ -214,36 +231,39 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         // stable regime (high gravity × a 1/60 s step tunnels the coin through the
         // floor) and gives the throw long hang time to show its tumble.
         scene.physicsWorld.gravity = SCNVector3(0, -CGFloat(config.gravity), 0)
-        if let body = coinNode.physicsBody {
-            body.mass = CGFloat(config.coinMass)
-            body.restitution = CGFloat(config.restitution)
-            body.friction = CGFloat(config.friction)
-            body.rollingFriction = CGFloat(config.rollingFriction)
-            body.damping = CGFloat(config.linearDamping)
-            body.angularDamping = CGFloat(config.angularDamping)
-        }
-        if let cyl = coinNode.childNode(withName: "coinVisual", recursively: false)?
-            .geometry as? SCNCylinder {
-            cyl.radius = CGFloat(config.coinRadius * Self.scale)
-            cyl.height = CGFloat(config.coinThickness * Self.scale)
+        for coinNode in coinNodes {
+            if let body = coinNode.physicsBody {
+                body.mass = CGFloat(config.coinMass)
+                body.restitution = CGFloat(config.restitution)
+                body.friction = CGFloat(config.friction)
+                body.rollingFriction = CGFloat(config.rollingFriction)
+                body.damping = CGFloat(config.linearDamping)
+                body.angularDamping = CGFloat(config.angularDamping)
+            }
+            if let cyl = coinNode.childNode(withName: "coinVisual", recursively: false)?
+                .geometry as? SCNCylinder {
+                cyl.radius = CGFloat(config.coinRadius * Self.scale)
+                cyl.height = CGFloat(config.coinThickness * Self.scale)
+            }
         }
     }
 
     // MARK: - Actions
 
     func reset() {
-        guard let body = coinNode.physicsBody else { return }
-        body.clearAllForces()
-        body.velocity = SCNVector3Zero
-        body.angularVelocity = SCNVector4Zero
-        coinNode.position = SCNVector3(0, CGFloat(Self.restY(config)), 0)
-        coinNode.eulerAngles = SCNVector3Zero
-        // Sync the physics body to the teleported node. Without this the body
-        // keeps its old transform, so the next impulse is applied in a stale
-        // frame — the coin pops weakly and barely rotates.
-        body.resetTransform()
+        for (i, coinNode) in coinNodes.enumerated() {
+            guard let body = coinNode.physicsBody else { continue }
+            body.clearAllForces()
+            body.velocity = SCNVector3Zero
+            body.angularVelocity = SCNVector4Zero
+            coinNode.position = Self.spawnPosition(config, index: i)
+            coinNode.eulerAngles = SCNVector3Zero
+            body.resetTransform()
+        }
         belowThresholdSince = nil
         throwStartTime = nil
+        lastPos = Array(repeating: nil, count: coinNodes.count)
+        lastQuat = Array(repeating: nil, count: coinNodes.count)
         publishState(.idle)
     }
 
@@ -251,29 +271,27 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
     /// about a random horizontal axis, so it flips face-over-face like a flicked
     /// coin rather than popping straight up.
     func performThrow() {
-        guard let body = coinNode.physicsBody else { return }
         reset()
-        let jitter = Double.random(in: -config.throwHorizontalJitter...config.throwHorizontalJitter)
-        let jitter2 = Double.random(in: -config.throwHorizontalJitter...config.throwHorizontalJitter)
-        let lift = SCNVector3(CGFloat(jitter),
-                              CGFloat(config.throwLinearImpulse),
-                              CGFloat(jitter2))
-        body.applyForce(lift, asImpulse: true)
-        // Tumble torque about a random horizontal axis. Magnitude is sized to the
-        // scaled coin's moment of inertia (≈3e-4), so it turns a few times over
-        // the arc instead of barely rotating.
-        let theta = Double.random(in: 0 ..< 2 * Double.pi)
-        let twist = SCNVector4(CGFloat(cos(theta)), 0, CGFloat(sin(theta)),
-                               CGFloat(config.throwAngularImpulse))
-        body.applyTorque(twist, asImpulse: true)
+        for coinNode in coinNodes {
+            guard let body = coinNode.physicsBody else { continue }
+            let jitter = Double.random(in: -config.throwHorizontalJitter...config.throwHorizontalJitter)
+            let jitter2 = Double.random(in: -config.throwHorizontalJitter...config.throwHorizontalJitter)
+            body.applyForce(SCNVector3(CGFloat(jitter),
+                                       CGFloat(config.throwLinearImpulse),
+                                       CGFloat(jitter2)), asImpulse: true)
+            let theta = Double.random(in: 0 ..< 2 * Double.pi)
+            body.applyTorque(SCNVector4(CGFloat(cos(theta)), 0, CGFloat(sin(theta)),
+                                        CGFloat(config.throwAngularImpulse)), asImpulse: true)
+        }
         publishState(.throwing)
     }
 
     /// Apply an externally-sourced impulse (e.g. from a real device shake).
     func applyShake(magnitude: Double) {
-        guard let body = coinNode.physicsBody else { return }
         let scaled = min(magnitude, 5.0) * config.throwLinearImpulse
-        body.applyForce(SCNVector3(0, CGFloat(scaled), 0), asImpulse: true)
+        for coinNode in coinNodes {
+            coinNode.physicsBody?.applyForce(SCNVector3(0, CGFloat(scaled), 0), asImpulse: true)
+        }
         publishState(.throwing)
     }
 
@@ -284,34 +302,42 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
     }
 
     private func tickSettle(time: TimeInterval) {
-        // SceneKit's SwiftUI SceneView does not report physics-body velocity here
-        // (it reads 0 even mid-flight), so we measure stillness from frame-to-frame
-        // change in the *presentation* transform instead.
-        let pres = coinNode.presentation
-        let pos = pres.simdWorldTransform.columns.3
-        let posV = simd_float3(pos.x, pos.y, pos.z)
-        let quat = pres.simdOrientation
-        defer { lastPos = posV; lastQuat = quat; lastTickTime = time }
-        guard let lp = lastPos, let lq = lastQuat, let lt = lastTickTime, time > lt else { return }
-        let dt = Float(time - lt)
-        // Linear speed in real m/s (positions are in scene units, scale× larger).
-        let linSpeed = Double(simd_length(posV - lp) / dt) / Self.scale
-        // Angular speed: angle between successive orientations, per second.
-        let dotq = min(1, abs(simd_dot(quat.vector, lq.vector)))
-        let angSpeed = Double(2 * acos(dotq) / dt)
-        let still = linSpeed < config.settleLinearThreshold && angSpeed < config.settleAngularThreshold
+        guard !coinNodes.isEmpty else { return }
+        var allStill = true
+        var haveHistory = lastTickTime != nil
+        let dt = Float(time - (lastTickTime ?? time))
 
-        // Only settle after a Throw — an untouched coin at idle must not fire.
+        for (i, coinNode) in coinNodes.enumerated() {
+            let pres = coinNode.presentation
+            let p = pres.simdWorldTransform.columns.3
+            let posV = simd_float3(p.x, p.y, p.z)
+            let quat = pres.simdOrientation
+            if haveHistory, dt > 0, let lp = lastPos[i], let lq = lastQuat[i] {
+                let linSpeed = Double(simd_length(posV - lp) / dt) / Self.scale
+                let dotq = min(1, abs(simd_dot(quat.vector, lq.vector)))
+                let angSpeed = Double(2 * acos(dotq) / dt)
+                if !(linSpeed < config.settleLinearThreshold && angSpeed < config.settleAngularThreshold) {
+                    allStill = false
+                }
+            } else {
+                allStill = false
+            }
+            lastPos[i] = posV
+            lastQuat[i] = quat
+        }
+        lastTickTime = time
+        if !haveHistory { return }
+
         let inFlight = currentState == .throwing || currentState == .settling
         guard inFlight else {
-            if !still, isSettledState(currentState) { publishState(.throwing) }
+            if !allStill, isSettledState(currentState) { publishState(.throwing) }
             return
         }
 
         if throwStartTime == nil { throwStartTime = time }
         let timedOut = time - (throwStartTime ?? time) >= config.settleTimeout
 
-        if still {
+        if allStill {
             if currentState == .throwing { publishState(.settling) }
             if belowThresholdSince == nil { belowThresholdSince = time }
         } else {
@@ -320,11 +346,11 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         let heldStill = belowThresholdSince.map { time - $0 >= config.settleHoldSeconds } ?? false
 
         if heldStill || timedOut {
-            let face = settledFace()
+            let results = makeResults()
             belowThresholdSince = nil
             throwStartTime = nil
-            publishState(.settled(face))
-            onSettle(makeResult(face: face))
+            publishState(.settled(results.first?.faceUp ?? .heads))
+            onSettle(results)
         }
     }
 
@@ -336,19 +362,20 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
     /// The settled face — binary by the sign of the coin's up-vector. On a flat
     /// tray an edge landing is vanishingly unlikely, so we don't model `.edge`
     /// here (that case exists only for a live mid-flight reader, unused for now).
-    private func settledFace() -> CoinFace {
-        let up = coinNode.presentation.simdWorldTransform.columns.1.y
-        return up >= 0 ? .heads : .tails
+    private func face(of coinNode: SCNNode) -> CoinFace {
+        coinNode.presentation.simdWorldTransform.columns.1.y >= 0 ? .heads : .tails
     }
 
-    private func makeResult(face: CoinFace) -> ThrowResult {
-        let m = coinNode.presentation.simdWorldTransform
-        let p = m.columns.3
-        let realPos = simd_float3(p.x, p.y, p.z) / Float(Self.scale)
-        return ThrowResult(id: 0,
-                           position: realPos,
-                           orientation: coinNode.presentation.simdOrientation,
-                           faceUp: face)
+    private func makeResults() -> [ThrowResult] {
+        coinNodes.enumerated().map { (i, coinNode) in
+            let m = coinNode.presentation.simdWorldTransform
+            let p = m.columns.3
+            let realPos = simd_float3(p.x, p.y, p.z) / Float(Self.scale)
+            return ThrowResult(id: i,
+                               position: realPos,
+                               orientation: coinNode.presentation.simdOrientation,
+                               faceUp: face(of: coinNode))
+        }
     }
 
     private func publishState(_ s: SettleState) {

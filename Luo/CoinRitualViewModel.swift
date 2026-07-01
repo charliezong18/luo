@@ -31,7 +31,7 @@ final class CoinRitualViewModel: ObservableObject {
     /// Lazy so the escaping callbacks can capture a fully-initialized self.
     lazy var scene: PhysicsScene = PhysicsScene(
         config: .v1,
-        onSettle: { [weak self] result in self?.handleSettle(result) },
+        onSettle: { [weak self] results in self?.handleSettle(results) },
         onStateChange: { [weak self] s in self?.handleStateChange(s) }
     )
 
@@ -49,9 +49,10 @@ final class CoinRitualViewModel: ObservableObject {
 
     // MARK: - PhysicsScene callbacks
 
-    private func handleSettle(_ result: ThrowResult) {
+    private func handleSettle(_ results: [ThrowResult]) {
+        guard let first = results.first else { return }
         haptics.playSettleThunk()
-        state = .result(Yinyang(result.faceUp))
+        state = .result(Yinyang(first.faceUp))
         hasCast = true
     }
 

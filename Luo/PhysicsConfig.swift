@@ -1,4 +1,5 @@
 import Foundation
+import simd
 
 /// Physics constants for `PhysicsScene`, in real-world units. The defaults are
 /// the values converged in the Coin Harness (ADR-0007) — production Rituals use
@@ -40,6 +41,25 @@ struct PhysicsConfig {
     var throwAngularImpulse: Double = 0.025    // tumble about a random horizontal axis
     var throwHorizontalJitter: Double = 0.003
 
+    // Multi-coin (三钱法). Coin ritual = 1; I Ching = 3. `spawnOffsets` are the
+    // per-coin rest positions in real-world units (x,z on the felt); an empty
+    // array means "single coin at origin". Count must be >= coinCount when >1.
+    var coinCount: Int = 1
+    var spawnOffsets: [SIMD3<Double>] = []
+
     /// The baked v1 constants production Rituals run on.
     static let v1 = PhysicsConfig()
+
+    /// Three-coin 三钱法 preset. Coins spawn spread across the felt so they don't
+    /// interpenetrate at rest; collision *feel* is tuned later (Task 9).
+    static let iChing: PhysicsConfig = {
+        var c = PhysicsConfig()
+        c.coinCount = 3
+        c.spawnOffsets = [
+            SIMD3(-0.05, 0, 0),
+            SIMD3( 0.00, 0, 0.02),
+            SIMD3( 0.05, 0, 0),
+        ]
+        return c
+    }()
 }

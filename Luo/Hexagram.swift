@@ -24,6 +24,16 @@ struct Hexagram: Equatable {
         yao.enumerated().filter { $0.element.isChanging }.map { $0.offset + 1 }
     }
 
+    /// The Resulting Hexagram (变卦): each changing Yao flips to the opposite
+    /// static line; each non-changing Yao becomes a static line of the same
+    /// polarity. `nil` when there are no changing Yao. The 变卦 is itself static
+    /// (none of its lines are changing).
+    var resultingHexagram: Hexagram? {
+        guard !changingPositions.isEmpty else { return nil }
+        let lines = yao.map { Yao(isYang: $0.isChanging ? !$0.isYang : $0.isYang) }
+        return Hexagram(yao: lines)
+    }
+
     private var info: HexagramInfo { KingWenTable.info(forBits: presentBits) }
     var number: Int { info.number }
     var name: String { info.name }

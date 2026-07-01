@@ -38,4 +38,25 @@ final class HexagramTests: XCTestCase {
         let h = Hexagram(yao: yaos)
         XCTAssertEqual(h.changingPositions, [1, 6]) // bottom old-yang, top old-yin
     }
+
+    func testNoChangingYaoHasNoResulting() {
+        let h = Hexagram(yao: Array(repeating: yao(heads: 1), count: 6)) // all young-yang
+        XCTAssertNil(h.resultingHexagram)
+    }
+
+    func testAllOldYangResultsInKun() {
+        let h = Hexagram(yao: Array(repeating: yao(heads: 3), count: 6)) // all old-yang, all changing
+        let r = h.resultingHexagram
+        XCTAssertEqual(r?.number, 2)
+        XCTAssertEqual(r?.name, "坤")
+        XCTAssertEqual(r?.changingPositions, []) // 变卦 is static
+    }
+
+    func testBottomChangingOnAllYangResultsInGou() {
+        // bottom old-yang (changing) + 5 young-yang → 本卦 乾; flip bottom → 姤 #44
+        let yaos = [yao(heads: 3)] + Array(repeating: yao(heads: 1), count: 5)
+        let r = Hexagram(yao: yaos).resultingHexagram
+        XCTAssertEqual(r?.number, 44)
+        XCTAssertEqual(r?.name, "姤")
+    }
 }

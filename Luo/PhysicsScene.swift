@@ -80,27 +80,29 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         let cam = SCNCamera()
         cam.zNear = 0.01
         cam.zFar = 10 * Double(s)
-        cam.fieldOfView = 42
+        cam.fieldOfView = 50
         cameraNode.camera = cam
-        // Higher and more top-down than the old shallow rig so the felt reads as a
-        // lit surface and all 3 coins stay framed without extreme near/far scale.
-        cameraNode.position = SCNVector3(0, 0.34 * s, 0.24 * s)
-        cameraNode.eulerAngles = SCNVector3(-0.92, 0, 0)
+        // Eased back toward the OLD oblique rig (coins clearly show their faces) but
+        // raised + tilted a touch flatter so the three coins read roughly even in
+        // size — between the old shallow angle and the flat top-down one, nearer old.
+        cameraNode.position = SCNVector3(0, 0.185 * s, 0.235 * s)
+        cameraNode.eulerAngles = SCNVector3(-0.64, 0, 0)
         scene.rootNode.addChildNode(cameraNode)
 
         // Soft omni fill, kept modest so it doesn't wash out the key light's shadow.
         let light = SCNNode()
         light.light = SCNLight()
         light.light?.type = .omni
-        light.light?.intensity = 350
-        light.position = SCNVector3(0.1 * s, 0.4 * s, 0.2 * s)
+        light.light?.intensity = 400
+        light.position = SCNVector3(0, 0.5 * s, 0.15 * s)
         scene.rootNode.addChildNode(light)
 
-        // Low ambient so the shadowed felt actually darkens (ambient fills shadows).
+        // Ambient raised a touch so the whole felt reads as a surface (not black
+        // except one hotspot), while staying moody enough to keep the Dusk mood.
         let ambient = SCNNode()
         ambient.light = SCNLight()
         ambient.light?.type = .ambient
-        ambient.light?.intensity = 150
+        ambient.light?.intensity = 300
         scene.rootNode.addChildNode(ambient)
 
         // Key light low from the front-right, so the contact shadow stretches back-
@@ -109,11 +111,11 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         let key = SCNNode()
         let keyLight = SCNLight()
         keyLight.type = .directional
-        keyLight.intensity = 1000
+        keyLight.intensity = 800
         keyLight.castsShadow = true
         keyLight.shadowMode = .forward
         keyLight.shadowSampleCount = 16
-        keyLight.shadowRadius = 5
+        keyLight.shadowRadius = 8
         keyLight.shadowColor = NSColor_or_UIColor(white: 0, alpha: 0.75)
         key.light = keyLight
         key.eulerAngles = SCNVector3(-0.6, 0.6, 0)   // ~34° above horizon, yaw right
@@ -187,23 +189,26 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
 
         let s = CGFloat(scale)
 
-        // Floor.
-        let floor = SCNBox(width: 0.22 * s, height: 0.005 * s, length: 0.22 * s, chamferRadius: 0)
-        // Warm raised-desk felt — DESIGN.md `surface-raised` #211B14, a shade up
-        // from the backdrop so the coin and its shadow read with depth.
-        let felt = SCNMaterial(); felt.diffuse.contents = NSColor_or_UIColor(red: 0.129, green: 0.106, blue: 0.078, alpha: 1)
+        // Floor — a LARGE thin slab whose edges fall outside the camera frame, so
+        // the lower screen reads as one continuous warm desk surface (not a small
+        // lit patch floating in black void). Physics floor is this whole slab.
+        let floor = SCNBox(width: 1.5 * s, height: 0.005 * s, length: 1.5 * s, chamferRadius: 0)
+        // Warm raised-desk felt — DESIGN.md `surface-raised` anchor, nudged up out of
+        // pure black so the whole surface reads (not just the key-light hotspot).
+        let felt = SCNMaterial(); felt.diffuse.contents = NSColor_or_UIColor(red: 0.17, green: 0.14, blue: 0.10, alpha: 1)
         floor.materials = [felt]
         let floorNode = SCNNode(geometry: floor)
         floorNode.physicsBody = SCNPhysicsBody(
             type: .static, shape: SCNPhysicsShape(geometry: floor, options: nil))
         tray.addChildNode(floorNode)
 
-        // Four low walls so a hard Throw can't fling the coin off the table into
-        // the void. Faint translucent rim — visible enough to read as a tray.
+        // Four INVISIBLE containment walls at a small radius, well inside the framed
+        // floor, so a hard Throw keeps the coins near center and in view. Fully
+        // transparent (alpha 0) — they contain physically but never draw.
         let wallMat = SCNMaterial()
-        // Faint warm rim — DESIGN.md `hairline` #37291A, translucent.
-        wallMat.diffuse.contents = NSColor_or_UIColor(red: 0.216, green: 0.161, blue: 0.102, alpha: 0.18)
-        let h: CGFloat = 0.08 * s, t: CGFloat = 0.004 * s, span: CGFloat = 0.22 * s
+        wallMat.diffuse.contents = NSColor_or_UIColor(white: 0, alpha: 0)
+        wallMat.transparency = 0
+        let h: CGFloat = 0.14 * s, t: CGFloat = 0.004 * s, span: CGFloat = 0.15 * s
         let walls: [(SCNVector3, CGFloat, CGFloat)] = [
             (SCNVector3(span/2, h/2, 0), t, span),   // +X
             (SCNVector3(-span/2, h/2, 0), t, span),  // -X

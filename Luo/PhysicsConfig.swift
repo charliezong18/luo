@@ -39,7 +39,7 @@ struct PhysicsConfig {
     // Throw impulse.
     var throwLinearImpulse: Double = 0.02      // kg·m/s, sets hang time
     var throwAngularImpulse: Double = 0.025    // tumble about a random horizontal axis
-    var throwHorizontalJitter: Double = 0.003
+    var throwHorizontalJitter: Double = 0.0015
 
     // Multi-coin (三钱法). Coin ritual = 1; I Ching = 3. `spawnOffsets` are the
     // per-coin rest positions in real-world units (x,z on the felt); an empty

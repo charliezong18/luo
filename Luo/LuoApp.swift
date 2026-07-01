@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 @main
 struct LuoApp: App {
@@ -6,5 +7,6 @@ struct LuoApp: App {
         WindowGroup {
             RootView()
         }
+        .modelContainer(for: CastRecord.self)
     }
 }

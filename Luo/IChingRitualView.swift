@@ -1,5 +1,6 @@
 import SwiftUI
 import SceneKit
+import SwiftData
 
 /// 六爻 三钱法 Ritual screen. Scene (3 coins) fills the top; the cast Yao stack
 /// grows bottom-up as each Throw settles; one cinnabar 掷 button advances. On the
@@ -7,6 +8,7 @@ import SceneKit
 struct IChingRitualView: View {
     @StateObject private var vm = IChingRitualViewModel()
     @State private var showText = false
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         ZStack {
@@ -34,6 +36,11 @@ struct IChingRitualView: View {
         }
         .animation(.easeInOut(duration: 0.35), value: vm.state)
         .animation(.easeInOut(duration: 0.35), value: vm.castYao.count)
+        .onChange(of: vm.state) { _, newState in
+            if case .complete(let hex) = newState {
+                modelContext.insert(CastRecord(from: hex, at: Date()))
+            }
+        }
         .onAppear { vm.startMotion() }
         .onDisappear { vm.stopMotion() }
     }

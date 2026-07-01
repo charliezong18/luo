@@ -23,6 +23,12 @@ struct Yao: Equatable {
         }
     }
 
+    /// A static (non-changing) line of the given polarity — used to build the
+    /// Resulting Hexagram (变卦), whose lines are not cast from coins.
+    init(isYang: Bool) {
+        kind = isYang ? .youngYang : .youngYin
+    }
+
     var isYang: Bool { kind == .oldYang || kind == .youngYang }
     var isChanging: Bool { kind == .oldYang || kind == .oldYin }
 

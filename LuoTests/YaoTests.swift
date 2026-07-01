@@ -35,4 +35,20 @@ final class YaoTests: XCTestCase {
         XCTAssertFalse(y.isYang)
         XCTAssertTrue(y.isChanging)
     }
+
+    func testStaticYangLine() {
+        let y = Yao(isYang: true)
+        XCTAssertTrue(y.isYang)
+        XCTAssertFalse(y.isChanging)
+        XCTAssertEqual(y.kind, .youngYang)
+        XCTAssertEqual(y.glyph, "⚊")
+    }
+
+    func testStaticYinLine() {
+        let y = Yao(isYang: false)
+        XCTAssertFalse(y.isYang)
+        XCTAssertFalse(y.isChanging)
+        XCTAssertEqual(y.kind, .youngYin)
+        XCTAssertEqual(y.glyph, "⚋")
+    }
 }

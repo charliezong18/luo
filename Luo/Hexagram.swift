@@ -12,6 +12,16 @@ struct Hexagram: Equatable {
         self.yao = yao
     }
 
+    /// Reconstruct a Hexagram from stored Identifier fields (Cast Log). Bit i
+    /// (0 = bottom) of `presentBits` is yang; bit i of `changingMask` is a 动爻.
+    init(presentBits: Int, changingMask: Int) {
+        let lines = (0..<6).map { i in
+            Yao(isYang: presentBits & (1 << i) != 0,
+                isChanging: changingMask & (1 << i) != 0)
+        }
+        self.init(yao: lines)
+    }
+
     /// 6-bit key, bottom→top, yang = 1 (bit 0 = bottom Yao).
     var presentBits: Int {
         var v = 0

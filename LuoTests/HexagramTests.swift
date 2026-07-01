@@ -59,4 +59,14 @@ final class HexagramTests: XCTestCase {
         XCTAssertEqual(r?.number, 44)
         XCTAssertEqual(r?.name, "姤")
     }
+
+    func testReconstructRoundTrips() {
+        // 乾 bottom old-yang + 5 young-yang → 姤 #44 变卦, 动爻 at position 1.
+        let original = Hexagram(yao: [yao(heads: 3)] + Array(repeating: yao(heads: 1), count: 5))
+        let rebuilt = Hexagram(presentBits: original.presentBits, changingMask: 0b000001)
+        XCTAssertEqual(rebuilt.number, original.number)          // 乾 #1
+        XCTAssertEqual(rebuilt.name, original.name)
+        XCTAssertEqual(rebuilt.changingPositions, [1])
+        XCTAssertEqual(rebuilt.resultingHexagram?.number, 44)    // 姤
+    }
 }

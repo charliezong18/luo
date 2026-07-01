@@ -6,6 +6,7 @@ import SceneKit
 /// 6th Yao the 本卦 (卦号 + 卦名 + 6-Yao glyph, 动爻 marked) fades in. 再占 resets.
 struct IChingRitualView: View {
     @StateObject private var vm = IChingRitualViewModel()
+    @State private var showText = false
 
     var body: some View {
         ZStack {
@@ -78,21 +79,80 @@ struct IChingRitualView: View {
     }
 
     private func hexagramResult(_ hex: Hexagram) -> some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 16) {
             Text("第 \(hex.number) 卦")
                 .font(Theme.serif(16))
                 .foregroundColor(Theme.ink.opacity(0.6))
+
+            // 本卦 → 变卦 side by side (arrow + 变卦 only when there are 动爻).
+            HStack(alignment: .center, spacing: 18) {
+                hexagramColumn(hex)
+                if let resulting = hex.resultingHexagram {
+                    Text("→")
+                        .font(Theme.serif(30))
+                        .foregroundColor(Theme.ink.opacity(0.5))
+                    hexagramColumn(resulting)
+                }
+            }
+
+            // 释文 toggle — only when the 本卦 has seeded canonical text.
+            if ZhouYiCorpus.text(forNumber: hex.number) != nil {
+                Button(action: { showText.toggle() }) {
+                    Text(showText ? "释文 ▴" : "释文 ▾")
+                        .font(Theme.serif(15))
+                        .foregroundColor(Theme.cinnabar)
+                }
+                if showText { canonicalText(hex) }
+            }
+        }
+        .transition(.opacity)
+    }
+
+    /// One hexagram column: 卦名 over its vertical 6-Yao glyph (top = Yao 6).
+    /// 动爻 rings come for free from `yaoRow` (the 变卦's lines are non-changing).
+    private func hexagramColumn(_ hex: Hexagram) -> some View {
+        VStack(spacing: 8) {
             Text(hex.name)
-                .font(Theme.serif(72, weight: .medium))
+                .font(Theme.serif(30, weight: .medium))
                 .foregroundColor(Theme.ink)
-            VStack(spacing: 6) {
+            VStack(spacing: 5) {
                 ForEach(Array(hex.yao.enumerated().reversed()), id: \.offset) { _, yao in
                     yaoRow(yao)
                 }
             }
-            .padding(.top, 6)
         }
-        .transition(.opacity)
+    }
+
+    /// Canonical 周易 text (ADR-0004): 本卦卦辞 · 动爻辞 (or 用九/用六 when all 6
+    /// change on 乾/坤) · 变卦卦辞. Classical text only, verbatim.
+    @ViewBuilder private func canonicalText(_ hex: Hexagram) -> some View {
+        if let t = ZhouYiCorpus.text(forNumber: hex.number) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(hex.name + "　" + t.guaCi)
+                    .font(Theme.serif(16))
+                    .foregroundColor(Theme.ink)
+                ForEach(changingLines(hex, t), id: \.self) { line in
+                    Text(line)
+                        .font(Theme.serif(15))
+                        .foregroundColor(Theme.ink.opacity(0.85))
+                }
+                if let resulting = hex.resultingHexagram {
+                    let rt = ZhouYiCorpus.text(forNumber: resulting.number)?.guaCi ?? "（待补）"
+                    Text("变卦 " + resulting.name + "　" + rt)
+                        .font(Theme.serif(16))
+                        .foregroundColor(Theme.ink.opacity(0.9))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
+        }
+    }
+
+    /// The 爻辞 lines to show for the 动爻 — or 用九/用六 when all 6 Yao change on
+    /// 乾/坤. `yaoCi` entries are already full labeled lines.
+    private func changingLines(_ hex: Hexagram, _ t: HexagramText) -> [String] {
+        if hex.changingPositions.count == 6, let yong = t.yong { return [yong] }
+        return hex.changingPositions.map { t.yaoCi[$0 - 1] }
     }
 
     private var castButton: some View {

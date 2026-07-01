@@ -51,4 +51,13 @@ final class YaoTests: XCTestCase {
         XCTAssertEqual(y.kind, .youngYin)
         XCTAssertEqual(y.glyph, "⚋")
     }
+
+    func testFullFactoryAllCombos() {
+        XCTAssertEqual(Yao(isYang: true,  isChanging: true).kind,  .oldYang)
+        XCTAssertEqual(Yao(isYang: true,  isChanging: false).kind, .youngYang)
+        XCTAssertEqual(Yao(isYang: false, isChanging: true).kind,  .oldYin)
+        XCTAssertEqual(Yao(isYang: false, isChanging: false).kind, .youngYin)
+        XCTAssertTrue(Yao(isYang: true, isChanging: true).isChanging)
+        XCTAssertFalse(Yao(isYang: false, isChanging: false).isChanging)
+    }
 }

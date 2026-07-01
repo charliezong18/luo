@@ -29,6 +29,17 @@ struct Yao: Equatable {
         kind = isYang ? .youngYang : .youngYin
     }
 
+    /// Full factory covering both axes — used to reconstruct a stored Cast's
+    /// exact lines (polarity + whether it was a 动爻) from the Cast Log.
+    init(isYang: Bool, isChanging: Bool) {
+        switch (isYang, isChanging) {
+        case (true, true):   kind = .oldYang
+        case (true, false):  kind = .youngYang
+        case (false, true):  kind = .oldYin
+        case (false, false): kind = .youngYin
+        }
+    }
+
     var isYang: Bool { kind == .oldYang || kind == .youngYang }
     var isChanging: Bool { kind == .oldYang || kind == .oldYin }
 

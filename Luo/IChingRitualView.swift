@@ -15,11 +15,14 @@ struct IChingRitualView: View {
 
             VStack {
                 hint
+                if case .complete = vm.state {
+                    EmptyView()
+                } else {
+                    tallyRow
+                }
                 Spacer()
                 if case .complete(let hex) = vm.state {
                     hexagramResult(hex)
-                } else {
-                    yaoStack
                 }
                 Spacer()
                 castButton
@@ -47,16 +50,22 @@ struct IChingRitualView: View {
         }
     }
 
-    /// Cast Yao so far, bottom-up (newest on top of the stack visually = top row
-    /// is the highest Yao index; we render top→bottom = Yao 6→1).
-    private var yaoStack: some View {
-        VStack(spacing: 8) {
-            ForEach(Array(vm.castYao.enumerated().reversed()), id: \.offset) { _, yao in
-                yaoRow(yao)
+    /// In-progress tally: a compact horizontal row read left→right in cast order
+    /// (throw 1 … throw 6), small and dim, sitting just under the hint at the top
+    /// so it never overlaps the coins in the center. 动爻 tinted cinnabar.
+    private var tallyRow: some View {
+        HStack(spacing: 12) {
+            ForEach(Array(vm.castYao.enumerated()), id: \.offset) { _, yao in
+                Text(yao.glyph)
+                    .font(Theme.serif(17))
+                    .foregroundColor((yao.isChanging ? Theme.cinnabar : Theme.ink).opacity(0.5))
             }
         }
+        .frame(height: 22)
+        .padding(.top, 6)
     }
 
+    /// Final-reveal Yao row (centered result), full-size with a 动爻 ring.
     private func yaoRow(_ yao: Yao) -> some View {
         HStack(spacing: 10) {
             Text(yao.glyph)

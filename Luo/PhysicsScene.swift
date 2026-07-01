@@ -80,9 +80,12 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         let cam = SCNCamera()
         cam.zNear = 0.01
         cam.zFar = 10 * Double(s)
+        cam.fieldOfView = 42
         cameraNode.camera = cam
-        cameraNode.position = SCNVector3(0, 0.12 * s, 0.22 * s)
-        cameraNode.eulerAngles = SCNVector3(-0.5, 0, 0)
+        // Higher and more top-down than the old shallow rig so the felt reads as a
+        // lit surface and all 3 coins stay framed without extreme near/far scale.
+        cameraNode.position = SCNVector3(0, 0.34 * s, 0.24 * s)
+        cameraNode.eulerAngles = SCNVector3(-0.92, 0, 0)
         scene.rootNode.addChildNode(cameraNode)
 
         // Soft omni fill, kept modest so it doesn't wash out the key light's shadow.
@@ -185,7 +188,7 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         let s = CGFloat(scale)
 
         // Floor.
-        let floor = SCNBox(width: 0.3 * s, height: 0.005 * s, length: 0.3 * s, chamferRadius: 0)
+        let floor = SCNBox(width: 0.22 * s, height: 0.005 * s, length: 0.22 * s, chamferRadius: 0)
         // Warm raised-desk felt — DESIGN.md `surface-raised` #211B14, a shade up
         // from the backdrop so the coin and its shadow read with depth.
         let felt = SCNMaterial(); felt.diffuse.contents = NSColor_or_UIColor(red: 0.129, green: 0.106, blue: 0.078, alpha: 1)
@@ -200,7 +203,7 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         let wallMat = SCNMaterial()
         // Faint warm rim — DESIGN.md `hairline` #37291A, translucent.
         wallMat.diffuse.contents = NSColor_or_UIColor(red: 0.216, green: 0.161, blue: 0.102, alpha: 0.18)
-        let h: CGFloat = 0.08 * s, t: CGFloat = 0.004 * s, span: CGFloat = 0.3 * s
+        let h: CGFloat = 0.08 * s, t: CGFloat = 0.004 * s, span: CGFloat = 0.22 * s
         let walls: [(SCNVector3, CGFloat, CGFloat)] = [
             (SCNVector3(span/2, h/2, 0), t, span),   // +X
             (SCNVector3(-span/2, h/2, 0), t, span),  // -X

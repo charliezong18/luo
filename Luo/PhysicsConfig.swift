@@ -56,9 +56,9 @@ struct PhysicsConfig {
         var c = PhysicsConfig()
         c.coinCount = 3
         c.spawnOffsets = [
-            SIMD3(-0.05, 0, 0),
-            SIMD3( 0.00, 0, 0.02),
-            SIMD3( 0.05, 0, 0),
+            SIMD3(-0.035, 0, 0),
+            SIMD3( 0.000, 0, 0.02),
+            SIMD3( 0.035, 0, 0),
         ]
         return c
     }()

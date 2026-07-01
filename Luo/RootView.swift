@@ -3,7 +3,7 @@ import SwiftUI
 /// Minimal Ritual switcher — the two v1 Rituals reachable from one screen.
 /// A real home is a later concern; this just makes both entries exist.
 struct RootView: View {
-    private enum Ritual { case coin, iching }
+    private enum Ritual { case coin, iching, castLog }
     @State private var ritual: Ritual?
 
     var body: some View {
@@ -12,6 +12,8 @@ struct RootView: View {
             ritualContainer { CoinRitualView() }
         case .iching:
             ritualContainer { IChingRitualView() }
+        case .castLog:
+            NavigationStack { CastLogListView(onBack: { ritual = nil }) }
         case nil:
             picker
         }
@@ -27,6 +29,7 @@ struct RootView: View {
                     .padding(.bottom, 12)
                 entryButton("六爻") { ritual = .iching }
                 entryButton("掷币") { ritual = .coin }
+                entryButton("占卜记录") { ritual = .castLog }
             }
         }
     }

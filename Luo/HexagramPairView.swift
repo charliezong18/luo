@@ -65,6 +65,7 @@ struct HexagramPairView: View {
                 Text(hex.name + "　" + t.guaCi)
                     .font(Theme.serif(16))
                     .foregroundColor(Theme.ink)
+                baiHuaLine(hex.number)
                 ForEach(changingLines(hex, t), id: \.self) { line in
                     Text(line)
                         .font(Theme.serif(15))
@@ -75,10 +76,22 @@ struct HexagramPairView: View {
                     Text("变卦 " + resulting.name + "　" + rt)
                         .font(Theme.serif(16))
                         .foregroundColor(Theme.ink.opacity(0.9))
+                    baiHuaLine(resulting.number)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 8)
+        }
+    }
+
+    /// The 白话 gloss for a hexagram's 卦辞, indented and dimmed so it reads as an
+    /// aid under the 原文. Absent glosses render nothing (graceful degrade).
+    @ViewBuilder private func baiHuaLine(_ number: Int) -> some View {
+        if let bh = BaiHuaCorpus.guaCi(forNumber: number) {
+            Text("白话　" + bh)
+                .font(Theme.serif(14))
+                .foregroundColor(Theme.ink.opacity(0.55))
+                .padding(.leading, 12)
         }
     }
 

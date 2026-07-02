@@ -153,9 +153,12 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
             m.shininess = shine
             return m
         }
-        let heads = brass(0.83, 0.67, 0.30, shine: 0.9)
+        // Heads (阳) = bright polished gold; Tails (阴) = darker olive-patina brass.
+        // The split is now hue *and* brightness (not brightness alone) so the two
+        // faces stay distinct mid-tumble under the moving key light.
+        let heads = brass(0.88, 0.72, 0.34, shine: 1.0)
         let edge  = brass(0.45, 0.35, 0.14, shine: 0.5)
-        let tails = brass(0.60, 0.46, 0.18, shine: 0.6)
+        let tails = brass(0.44, 0.45, 0.28, shine: 0.5)
         cyl.materials = [edge, heads, tails]   // SCNCylinder order: side, top, bottom
 
         // Visual lives in a child lowered by the contact gap so the coin reads as

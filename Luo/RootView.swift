@@ -50,9 +50,11 @@ struct RootView: View {
             content()
             Button(action: { ritual = nil }) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(Theme.ink.opacity(0.7))
-                    .padding(12)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(Theme.ink.opacity(0.8))
+                    .frame(width: 40, height: 40)
+                    .background(Theme.deskBackground.opacity(0.6), in: Circle())
+                    .overlay(Circle().stroke(Theme.ink.opacity(0.18), lineWidth: 1))
             }
             .padding(.top, 8)
             .padding(.leading, 8)

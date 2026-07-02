@@ -17,19 +17,21 @@ struct IChingRitualView: View {
                 .ignoresSafeArea()
                 .opacity(sceneOpacity)
 
-            VStack {
+            VStack(spacing: 0) {
                 hint
-                if case .complete = vm.state {
-                    EmptyView()
+                if case .complete(let hex) = vm.state {
+                    // Scroll the (now long) 卦辞/爻辞/白话 so it can't push 再占
+                    // off-screen; the button stays pinned at the bottom.
+                    ScrollView(showsIndicators: false) {
+                        hexagramResult(hex)
+                            .padding(.vertical, 16)
+                    }
                 } else {
                     tallyRow
+                    Spacer()
                 }
-                Spacer()
-                if case .complete(let hex) = vm.state {
-                    hexagramResult(hex)
-                }
-                Spacer()
                 castButton
+                    .padding(.top, 12)
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 40)

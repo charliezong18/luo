@@ -66,10 +66,18 @@ struct HexagramPairView: View {
                     .font(Theme.serif(16))
                     .foregroundColor(Theme.ink)
                 baiHuaLine(hex.number)
-                ForEach(changingLines(hex, t), id: \.self) { line in
-                    Text(line)
-                        .font(Theme.serif(15))
-                        .foregroundColor(Theme.ink.opacity(0.85))
+                ForEach(Array(changingLines(hex, t).enumerated()), id: \.offset) { _, line in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(line.text)
+                            .font(Theme.serif(15))
+                            .foregroundColor(Theme.ink.opacity(0.85))
+                        if let bh = line.baihua {
+                            Text("白话　" + bh)
+                                .font(Theme.serif(14))
+                                .foregroundColor(Theme.ink.opacity(0.55))
+                                .padding(.leading, 12)
+                        }
+                    }
                 }
                 if let resulting = hex.resultingHexagram {
                     let rt = ZhouYiCorpus.text(forNumber: resulting.number)?.guaCi ?? "（待补）"
@@ -95,8 +103,16 @@ struct HexagramPairView: View {
         }
     }
 
-    private func changingLines(_ hex: Hexagram, _ t: HexagramText) -> [String] {
-        if hex.changingPositions.count == 6, let yong = t.yong { return [yong] }
-        return hex.changingPositions.map { t.yaoCi[$0 - 1] }
+    /// Each changing line as (原文, 白话?). When all 6 lines change, 乾/坤 read
+    /// their 用九/用六 instead of the six 爻辞. 白话 degrades to nil when unwritten.
+    private func changingLines(_ hex: Hexagram, _ t: HexagramText) -> [(text: String, baihua: String?)] {
+        let gloss = BaiHuaCorpus.gloss(forNumber: hex.number)
+        if hex.changingPositions.count == 6, let yong = t.yong {
+            return [(yong, gloss?.yong)]
+        }
+        return hex.changingPositions.map { pos in
+            let bh = gloss?.yaoCi.indices.contains(pos - 1) == true ? gloss?.yaoCi[pos - 1] : nil
+            return (t.yaoCi[pos - 1], bh)
+        }
     }
 }

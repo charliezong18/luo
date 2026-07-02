@@ -15,6 +15,7 @@ struct IChingRitualView: View {
             Theme.deskBackground.ignoresSafeArea()
             SceneView(scene: vm.scene.scene, options: [], delegate: vm.scene)
                 .ignoresSafeArea()
+                .opacity(sceneOpacity)
 
             VStack {
                 hint
@@ -43,6 +44,13 @@ struct IChingRitualView: View {
         }
         .onAppear { vm.startMotion() }
         .onDisappear { vm.stopMotion() }
+    }
+
+    /// Dim the 3D desk once the 本卦 lands so the 卦辞/爻辞 reads as the focus,
+    /// not the coins behind it. Animated by the ZStack's `.animation(value:)`.
+    private var sceneOpacity: Double {
+        if case .complete = vm.state { return 0.22 }
+        return 1
     }
 
     private var hint: some View {

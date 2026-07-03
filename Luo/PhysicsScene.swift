@@ -1,6 +1,7 @@
 import Foundation
 import SceneKit
 import simd
+import CoreGraphics
 
 /// The shared physics rig for 落's Rituals (ADR-0005) — a concrete class, not a
 /// protocol. Owns the SceneKit scene + the coin rigid body, turns Throw/Shake
@@ -31,6 +32,9 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
     let scene = SCNScene()
     private var coinNodes: [SCNNode] = []
     private let tableNode: SCNNode
+    /// Kept so the ritual can cinematically dolly it from the oblique cast angle to a
+    /// straight-down view once the coins settle, making the 钱文 read clearly.
+    private let cameraNode = SCNNode()
 
     private var config: PhysicsConfig
     private let onSettle: ([ThrowResult]) -> Void
@@ -72,19 +76,26 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         // Warm near-black desk backdrop so the coin reads against it.
         // DESIGN.md `neutral` #14110D — warm, not the cold #141414 of white:0.08.
         scene.background.contents = NSColor_or_UIColor(red: 0.078, green: 0.067, blue: 0.051, alpha: 1)
+
+        // PBR metal is only as good as what it can reflect: a flat scene makes the
+        // brass read as black. Give it a warm vertical-gradient environment (dark
+        // felt bounce below → a bright overhead key glow up top) so the coin catches
+        // moving highlights as it tumbles. Kept dim enough not to fight the Dusk mood.
+        scene.lightingEnvironment.contents = Self.makeEnvironmentImage()
+        scene.lightingEnvironment.intensity = 1.6
+
         scene.rootNode.addChildNode(tableNode)
         for node in coinNodes { scene.rootNode.addChildNode(node) }
 
         let s = CGFloat(Self.scale)
-        let cameraNode = SCNNode()
         let cam = SCNCamera()
         cam.zNear = 0.01
         cam.zFar = 10 * Double(s)
         cam.fieldOfView = 50
         cameraNode.camera = cam
-        // Eased back toward the OLD oblique rig (coins clearly show their faces) but
-        // raised + tilted a touch flatter so the three coins read roughly even in
-        // size — between the old shallow angle and the flat top-down one, nearer old.
+        // The oblique cast framing (coins clearly show their faces at a comfortable
+        // downward tilt). After the coins settle the ritual dollies this to the
+        // straight-down `settledCameraTransform` so all three 钱文 read flat-on.
         cameraNode.position = SCNVector3(0, 0.185 * s, 0.235 * s)
         cameraNode.eulerAngles = SCNVector3(-0.64, 0, 0)
         scene.rootNode.addChildNode(cameraNode)
@@ -102,7 +113,7 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         let ambient = SCNNode()
         ambient.light = SCNLight()
         ambient.light?.type = .ambient
-        ambient.light?.intensity = 300
+        ambient.light?.intensity = 450
         scene.rootNode.addChildNode(ambient)
 
         // Key light low from the front-right, so the contact shadow stretches back-
@@ -120,6 +131,30 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         key.light = keyLight
         key.eulerAngles = SCNVector3(-0.6, 0.6, 0)   // ~34° above horizon, yaw right
         scene.rootNode.addChildNode(key)
+
+        // Hero spotlight: a tight warm cone raking the coin center from front-upper-left.
+        // The grazing angle catches the raised 钱文 and rim as a bright specular hotspot
+        // — the "金光一闪" that separates real metal from a flat disc — while its narrow
+        // falloff keeps the surrounding felt dark and moody. Aimed at the coin origin.
+        let spot = SCNNode()
+        let spotLight = SCNLight()
+        spotLight.type = .spot
+        spotLight.intensity = 1700
+        spotLight.color = NSColor_or_UIColor(red: 1.0, green: 0.90, blue: 0.70, alpha: 1)
+        spotLight.spotInnerAngle = 10
+        spotLight.spotOuterAngle = 42
+        spotLight.attenuationStartDistance = 0
+        spotLight.attenuationEndDistance = CGFloat(1.2 * s)
+        spot.light = spotLight
+        // Low, off to the side and forward — a grazing angle that rakes across the
+        // relief instead of flattening it from overhead (which blew out to plastic-
+        // bright when the camera pulled straight up). The shallow rake catches the
+        // rim + 钱文 edges and lets the far side fall into shadow for depth.
+        spot.position = SCNVector3(-0.30 * s, 0.20 * s, 0.26 * s)
+        let look = SCNLookAtConstraint(target: coinNodes.first ?? tableNode)
+        look.isGimbalLockEnabled = true
+        spot.constraints = [look]
+        scene.rootNode.addChildNode(spot)
     }
 
     /// Resting Y for the coin, in scaled scene units: floor top (box centered at
@@ -140,31 +175,71 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
     }
 
     private static func makeCoinNode(config c: PhysicsConfig) -> SCNNode {
-        let cyl = SCNCylinder(radius: CGFloat(c.coinRadius * scale),
-                              height: CGFloat(c.coinThickness * scale))
-        // Brass 五帝-style coin. Heads (+Y) = bright polished brass, Tails (-Y) =
-        // darker patina brass, edge = dark brass. The brightness split keeps the
-        // two faces visually distinct (and matches the face the Settle reader picks).
-        func brass(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat, shine: CGFloat) -> SCNMaterial {
+        let r = CGFloat(c.coinRadius * scale)
+        let t = CGFloat(c.coinThickness * scale)
+
+        // Physics stays a plain cylinder (boundingBox shape) — the square hole is
+        // purely visual and never changes how the coin lands or which face reads up.
+        let cyl = SCNCylinder(radius: r, height: t)
+
+        // Brass 五帝-style coin, physically-based so it reads as real metal: metalness
+        // ~1 plus the warm `lightingEnvironment` (set in buildScene) give it reflections
+        // instead of the flat plastic look .blinn produced. Roughness carries most of
+        // the face distinction — polished 阳 vs matte-patina 阴 — with an albedo hue
+        // split on top so the faces stay legible mid-tumble.
+        func brass(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat, rough: CGFloat) -> SCNMaterial {
             let m = SCNMaterial()
-            m.lightingModel = .blinn
+            m.lightingModel = .physicallyBased
             m.diffuse.contents = NSColor_or_UIColor(red: r, green: g, blue: b, alpha: 1)
-            m.specular.contents = NSColor_or_UIColor(white: 1, alpha: 1)
-            m.shininess = shine
+            m.metalness.contents = 0.95
+            m.roughness.contents = rough
+            m.isDoubleSided = true
             return m
         }
-        // Heads (阳) = bright polished gold; Tails (阴) = darker olive-patina brass.
-        // The split is now hue *and* brightness (not brightness alone) so the two
-        // faces stay distinct mid-tumble under the moving key light.
-        let heads = brass(0.88, 0.72, 0.34, shine: 1.0)
-        let edge  = brass(0.45, 0.35, 0.14, shine: 0.5)
-        let tails = brass(0.44, 0.45, 0.28, shine: 0.5)
-        cyl.materials = [edge, heads, tails]   // SCNCylinder order: side, top, bottom
+        // Sides & chamfer stay a plain aged-brass PBR; the two flat faces get
+        // procedurally baked textures (relief 钱文 + verdigris patina) so the coin reads
+        // as a real cast 方孔圆钱. See CoinTexture.
+        let edge = brass(0.46, 0.34, 0.15, rough: 0.52)
 
-        // Visual lives in a child lowered by the contact gap so the coin reads as
-        // resting on the felt; the parent node carries the physics body.
-        let visual = SCNNode(geometry: cyl)
+        // Visual: a 方孔圆钱 (outer disc, centered square hole, beveled rim) instead of
+        // the bare cylinder — the square hole is the coin's whole visual identity.
+        let coin = Self.makeCoinGeometry(radius: r, thickness: t)
+#if canImport(UIKit)
+        func faceMaterial(_ maps: CoinTexture.Maps) -> SCNMaterial {
+            let m = SCNMaterial()
+            m.lightingModel = .physicallyBased
+            m.metalness.contents = 1.0
+            m.diffuse.contents = maps.albedo
+            m.normal.contents = maps.normal
+            m.roughness.contents = maps.roughness
+            for prop in [m.diffuse, m.normal, m.roughness] {
+                prop.wrapS = .clamp
+                prop.wrapT = .clamp
+            }
+            m.isDoubleSided = true
+            return m
+        }
+        // Material order is front / back / sides / chamfer. The back cap lands +Y-up at
+        // rest (the physics up-face the settle reader calls 阳/heads), so it wears the
+        // plain 背面; the front cap (阴) carries the 乾隆通宝 字面.
+        coin.materials = [faceMaterial(CoinTexture.inscribedFace()),
+                          faceMaterial(CoinTexture.blankFace()),
+                          edge, edge]
+#else
+        let heads = brass(0.82, 0.62, 0.30, rough: 0.44)
+        let tails = brass(0.44, 0.45, 0.28, rough: 0.62)
+        coin.materials = [tails, heads, edge, edge]
+#endif
+
+        // The child sits lowered by the contact gap so the coin reads as resting on the
+        // felt; the parent node carries the physics body. SCNShape extrudes in the XY
+        // plane along +Z, so tip it a quarter-turn about X to lay it flat with its faces
+        // along ±Y (the cylinder-physics up-axis the settle reader uses). The −quarter
+        // turn puts the inscribed 字面 (front cap) up at rest — the coin reads as 阳 and
+        // shows its face before the first throw; a flip to 背面 reads as 阴, consistently.
+        let visual = SCNNode(geometry: coin)
         visual.name = "coinVisual"
+        visual.eulerAngles = SCNVector3(-CGFloat.pi / 2, 0, 0)
         visual.position = SCNVector3(0, -CGFloat(contactGap), 0)
 
         let node = SCNNode()
@@ -185,6 +260,76 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         body.allowsResting = true
         node.physicsBody = body
         return node
+    }
+
+    /// A 方孔圆钱 solid: an outer disc of `radius` with a centered square hole,
+    /// extruded to `thickness` with a small chamfer so the rim reads as a rounded
+    /// edge. Built with UIKit's bezier path; the (never-shipped) macOS branch falls
+    /// back to a plain cylinder so the file still compiles cross-platform.
+    private static func makeCoinGeometry(radius r: CGFloat, thickness t: CGFloat) -> SCNGeometry {
+#if canImport(UIKit)
+        let path = UIBezierPath(ovalIn: CGRect(x: -r, y: -r, width: 2 * r, height: 2 * r))
+        let hs = r * 0.34                        // half the square-hole side (方孔)
+        path.append(UIBezierPath(rect: CGRect(x: -hs, y: -hs, width: 2 * hs, height: 2 * hs)))
+        path.usesEvenOddFillRule = true          // inner square punches a hole
+        path.flatness = r * 0.01                  // keep the disc round at this scale
+        let shape = SCNShape(path: path, extrusionDepth: t)
+        shape.chamferRadius = t * 0.4
+        return shape
+#else
+        return SCNCylinder(radius: r, height: t)
+#endif
+    }
+
+    /// An equirectangular environment map for `scene.lightingEnvironment`. Metal is
+    /// almost entirely reflection, so a flat gradient makes brass read as plastic —
+    /// the fix (per PBR IBL best-practice) is to give it a HIGH-CONTRAST surrounding
+    /// with distinct bright "windows" and dark gaps to reflect. We paint, in code:
+    ///   • a warm vertical gradient base (dark floor → warm ceiling),
+    ///   • two soft bright light-panels (studio softboxes) high on the sphere,
+    ///   • a darker band low down so reflections have somewhere black to fall off.
+    /// The moving light/dark boundary sweeping across the coin as it tumbles is what
+    /// sells it as real metal. Full-width equirect (2:1) so it wraps horizontally.
+    private static func makeEnvironmentImage() -> CGImage? {
+        let width = 512, height = 256
+        let cs = CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8,
+            bytesPerRow: 0, space: cs,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+
+        // Base warm vertical gradient (v = 0 bottom → 1 top in CG space).
+        let colors = [
+            NSColor_or_UIColor(red: 0.015, green: 0.012, blue: 0.008, alpha: 1).cgColor, // deep floor
+            NSColor_or_UIColor(red: 0.11,  green: 0.085, blue: 0.055, alpha: 1).cgColor, // warm mid
+            NSColor_or_UIColor(red: 0.30,  green: 0.245, blue: 0.165, alpha: 1).cgColor, // upper wall
+        ] as CFArray
+        guard let grad = CGGradient(colorsSpace: cs, colors: colors,
+                                    locations: [0.0, 0.5, 1.0]) else { return nil }
+        ctx.drawLinearGradient(grad, start: CGPoint(x: 0, y: 0),
+                               end: CGPoint(x: 0, y: height), options: [])
+
+        // Bright soft light panels (studio softboxes) — the high-contrast features the
+        // metal reflects as crisp moving highlights. Radial gradients = soft falloff.
+        func panel(cx: CGFloat, cy: CGFloat, rx: CGFloat, ry: CGFloat, peak: CGFloat) {
+            ctx.saveGState()
+            ctx.translateBy(x: cx, y: cy); ctx.scaleBy(x: rx, y: ry)
+            let g = CGGradient(colorsSpace: cs, colors: [
+                NSColor_or_UIColor(white: peak, alpha: 1).cgColor,
+                NSColor_or_UIColor(white: peak, alpha: 0).cgColor] as CFArray,
+                locations: [0.0, 1.0])!
+            ctx.drawRadialGradient(g, startCenter: .zero, startRadius: 0,
+                                   endCenter: .zero, endRadius: 1,
+                                   options: [.drawsBeforeStartLocation]) // additive-ish soft glow
+            ctx.restoreGState()
+        }
+        ctx.setBlendMode(.normal)
+        panel(cx: CGFloat(width) * 0.30, cy: CGFloat(height) * 0.72,
+              rx: CGFloat(width) * 0.16, ry: CGFloat(height) * 0.22, peak: 0.95)  // main key window
+        panel(cx: CGFloat(width) * 0.68, cy: CGFloat(height) * 0.80,
+              rx: CGFloat(width) * 0.10, ry: CGFloat(height) * 0.14, peak: 0.55)  // dimmer fill window
+
+        return ctx.makeImage()
     }
 
     private static func makeTableNode() -> SCNNode {
@@ -259,6 +404,33 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         }
     }
 
+    // MARK: - Camera dolly
+
+    /// Oblique cast framing (what you throw from) — the comfortable downward tilt.
+    private var castCamPosition: SCNVector3 {
+        let s = CGFloat(Self.scale); return SCNVector3(0, 0.185 * s, 0.235 * s)
+    }
+    private let castCamEuler = SCNVector3(-0.64, 0, 0)
+
+    /// Straight-down framing (what the result rests in) — a near-top-down view so all
+    /// three coins' 钱文 read flat-on without perspective squash.
+    private var settledCamPosition: SCNVector3 {
+        let s = CGFloat(Self.scale); return SCNVector3(0, 0.34 * s, 0.012 * s)
+    }
+    private let settledCamEuler = SCNVector3(-1.52, 0, 0)   // ~87° down, essentially top-down
+
+    /// Ease the camera between the two framings. Called with `toSettled: true` when the
+    /// coins come to rest (slow, cinematic pull overhead) and `false` on the next throw
+    /// (quicker return to the cast angle).
+    private func dollyCamera(toSettled: Bool, duration: TimeInterval) {
+        SCNTransaction.begin()
+        SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        SCNTransaction.animationDuration = duration
+        cameraNode.position = toSettled ? settledCamPosition : castCamPosition
+        cameraNode.eulerAngles = toSettled ? settledCamEuler : castCamEuler
+        SCNTransaction.commit()
+    }
+
     // MARK: - Actions
 
     func reset() {
@@ -275,6 +447,7 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         throwStartTime = nil
         lastPos = Array(repeating: nil, count: coinNodes.count)
         lastQuat = Array(repeating: nil, count: coinNodes.count)
+        dollyCamera(toSettled: false, duration: 0.5)
         publishState(.idle)
     }
 
@@ -360,6 +533,8 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
             let results = makeResults()
             belowThresholdSince = nil
             throwStartTime = nil
+            // Cinematic pull to a top-down view so the settled 钱文 reads clearly.
+            dollyCamera(toSettled: true, duration: 1.1)
             publishState(.settled(results.first?.faceUp ?? .heads))
             onSettle(results)
         }

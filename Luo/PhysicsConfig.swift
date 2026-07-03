@@ -9,7 +9,7 @@ struct PhysicsConfig {
 
     // Coin geometry. Game-feel values, not real-quarter dimensions.
     var coinMass: Double = 0.01          // kg
-    var coinRadius: Double = 0.014       // m
+    var coinRadius: Double = 0.017       // m
     var coinThickness: Double = 0.002    // m
 
     // World.

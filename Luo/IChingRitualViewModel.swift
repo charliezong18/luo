@@ -48,8 +48,11 @@ final class IChingRitualViewModel: ObservableObject {
         state = castYao.count == 6 ? .complete(Hexagram(yao: castYao)) : .idle
     }
 
+    /// A shake casts the next Yao via the same full Throw as the button (reset +
+    /// random tumble), keeping shaken casts as fair as tapped ones. `cast()` already
+    /// no-ops while coins are in flight or the hexagram is complete.
     func startMotion() {
-        motion.start { [weak self] mag in self?.scene.applyShake(magnitude: mag) }
+        motion.start { [weak self] _ in self?.cast() }
     }
     func stopMotion() { motion.stop() }
 

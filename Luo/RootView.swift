@@ -30,6 +30,12 @@ struct RootView: View {
                 entryButton("六爻") { ritual = .iching }
                 entryButton("掷币") { ritual = .coin }
                 entryButton("占卜记录") { ritual = .castLog }
+                // App Store review requirement for fortune-telling apps: state plainly
+                // that results are for entertainment/reflection, not advice.
+                Text("卜筮之言，仅供娱乐与自省，不构成任何建议")
+                    .font(Theme.serif(13))
+                    .foregroundColor(Theme.ink.opacity(0.35))
+                    .padding(.top, 20)
             }
         }
     }

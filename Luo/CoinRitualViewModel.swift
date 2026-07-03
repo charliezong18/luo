@@ -41,9 +41,15 @@ final class CoinRitualViewModel: ObservableObject {
         state = .casting
     }
 
-    /// Start/stop device-shake casting (no-op in simulator).
+    /// Start/stop device-shake casting (no-op in simulator). A shake runs the same
+    /// full Throw as the button — reset + lift + random tumble torque — so a shaken
+    /// cast is exactly as fair as a tapped one (a bare upward impulse barely flips
+    /// the coin and biases the result). Ignored mid-flight.
     func startMotion() {
-        motion.start { [weak self] mag in self?.scene.applyShake(magnitude: mag) }
+        motion.start { [weak self] _ in
+            guard let self, self.state != .casting else { return }
+            self.cast()
+        }
     }
     func stopMotion() { motion.stop() }
 

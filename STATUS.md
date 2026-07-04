@@ -11,17 +11,22 @@
 - ✅ Coin Ritual：物理掷币（方孔圆钱 + PBR 古铜材质 + 落定推镜），摇一摇走完整 Throw 保证公平
 - ✅ 六爻起卦 → 本卦/变爻完整流程，结果页可滚动 + 再占常驻
 - ✅ ZhouYiCorpus 全 64 卦（卦辞 + 384 爻辞），已订正賁卦上九
-- ✅ 白话 gloss 层：64 卦辞 + 变爻爻辞白话，AES-GCM 加密 bundle 资源
+- ✅ 白话 gloss 层**全量**：64 卦辞 + 384 爻辞 + 乾坤用九/用六，AES-GCM 加密 bundle 资源（解密完整性有单测 `BaiHuaCorpusTests` 兜底）
 - ✅ 占卜记录（Cast Log）：列表 + swipe 删除 + 清空
 - ✅ App 图标（真渲染铜钱）、内置 Noto Serif SC、LICENSE（source-available）、首页娱乐声明
 
 ## 下一步
 
-（未定 — 等 Charlie 拍板，候选项：）
+**待办以 [GitHub Issues](https://github.com/charliezong18/luo/issues) 为准**，此处只留索引（勾掉 = issue 已关）：
 
-- [ ] 真机测试 + TestFlight —— 被 $99 Apple Developer 会员卡着（在购物清单里，已推迟）
-- [ ] App Store 上架准备（截图、文案、隐私标注）
-- [ ] 其他 feature 想法先记到这里再动手
+- [ ] #1 语料标点统一（`ship-blocker`，上架前必须）
+- [ ] #2 README 门面升级：状态更新 + 截图
+- [ ] #3 真机测试 + TestFlight（阻塞项：Apple Developer 会员未购）
+- [ ] #4 App Store 上架准备（依赖 #3）
+- [ ] #5 LLM 解读层（远期）
+- [ ] #6 再占后释文 toggle 不重置（小 bug）
+
+注：白话 384 爻辞 gloss 无需再做——已全量完成并在加密语料内（见上方「当前状态」）。
 
 ## 已知问题 / 坑
 
@@ -30,4 +35,6 @@
 
 ## Session 日志（最近 5 条，旧的删掉）
 
+- 2026-07-04：白话语料改加密交付（BaiHua.enc + 密钥不入库）、git 历史重写（明文清除 + 作者邮箱统一）、LICENSE source-available、repo 转 public
 - 2026-07-04：建立 CLAUDE.md + STATUS.md（第一层状态外化），无代码改动
+- 2026-07-04：待办迁移至 GitHub Issues #1–#6，修正 STATUS 中"384 爻辞 gloss 待做"的过期记载（实际已全量完成）

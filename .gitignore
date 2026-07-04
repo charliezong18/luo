@@ -1,6 +1,11 @@
 # macOS
 .DS_Store
 
+# 白话 gloss corpus — proprietary. Only the AES-GCM blob (Luo/Resources/BaiHua.enc)
+# is committed; key + plaintext stay local. Missing key ⇒ app shows 原文 only.
+Luo/Resources/BaiHua.key
+scripts/baihua-plaintext.json
+
 # Xcode
 build/
 DerivedData/

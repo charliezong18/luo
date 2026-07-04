@@ -107,7 +107,12 @@ struct IChingRitualView: View {
     }
 
     private func buttonAction() {
-        if vm.isComplete { vm.reset() } else { vm.cast() }
+        if vm.isComplete {
+            showText = false   // each new Cast starts with 释文 collapsed
+            vm.reset()
+        } else {
+            vm.cast()
+        }
     }
 }
 

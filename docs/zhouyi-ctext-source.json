@@ -1,7 +1,7 @@
 {
  "_source": "https://ctext.org/book-of-changes (《易經》古经, 阮元本 orthography)",
  "_extracted": "2026-07-01",
- "_note": "卦辞/爻辞 only, 十翼 excluded; 爻题 separator normalized to ：. Provenance for ZhouYiCorpus.swift 3–64. Punctuation-normalization proofing pending.",
+ "_note": "卦辞/爻辞 only, 十翼 excluded; 爻题 separator normalized to ：. Provenance for ZhouYiCorpus.swift 3–64. Punctuation normalized to 通行本 light style 2026-07-04 (characters untouched; this file keeps the raw ctext punctuation as fetched).",
  "hexagrams": {
   "1": {
    "slug": "qian",

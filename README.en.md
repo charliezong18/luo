@@ -15,20 +15,23 @@ The visual system is specified in Google's [design.md](https://github.com/google
 
 The dark/light choice is **deliberately deferred to Phase 2** (real device, judged in the hand). Both pass `npx @google/design.md lint <file>` clean. Validate any token edit with the lint CLI before committing. Chinese reading mirrors: `DESIGN.zh.md` / `DESIGN-paper.zh.md` (tokens canonical in the English files).
 
-## Current state — Phase 0/1 staging
+## Current state — v1 mainline working
 
-Per ADR-0007 (build cadence: Coin Harness → I Ching; full ADRs live in a private design vault), the first thing built is a *Coin Harness* — a deliberately ugly SceneKit + CoreMotion + CoreHaptics rig used to tune Settle feel on a single-coin primitive. The Harness is throwaway; only the converged physics constants survive into v1.
+Both v1 Rituals (Coin + I Ching 六爻) run end-to-end on the simulator: physics coin cast → six-line accumulation → present hexagram / changing lines → resulting hexagram → reading layer (canonical 周易 text + plain-language gloss) → persisted cast log. Roadmap and open work live in [GitHub Issues](https://github.com/charliezong18/luo/issues).
 
-The Swift sources for the Harness are pre-staged in `Luo/`:
+<p align="center">
+  <img src="docs/screenshots/home.png" width="230" alt="Home">&nbsp;&nbsp;
+  <img src="docs/screenshots/coin.png" width="230" alt="Coin ritual">&nbsp;&nbsp;
+  <img src="docs/screenshots/iching.png" width="230" alt="I Ching: present → resulting hexagram with reading">
+</p>
 
-| File | Role |
-|---|---|
-| `LuoApp.swift` | `@main` SwiftUI App entry |
-| `HarnessView.swift` | Top SceneView, Settle indicator, Throw / Reset / Shake controls, slider list |
-| `CoinHarnessScene.swift` | SceneKit scene: single coin + table + Settle detector |
-| `PhysicsParams.swift` | Observable model of every tunable knob |
-| `MotionService.swift` | CoreMotion wrapper, fires on sustained-acceleration shake |
-| `HapticsService.swift` | CoreHaptics wrapper, settle-thunk + tumble-tick |
+- **Physics-grade coin cast** — real SceneKit/PhysX rigid bodies, square-holed coin with PBR aged-bronze material; shake triggers a full throw (fair by construction, no shortcuts)
+- **六爻 three-coin method** — 6 throws × 3 coins accumulate into a hexagram; changing lines marked in cinnabar; present → resulting hexagram side by side
+- **Reading layer** — all 64 卦辞 + 384 爻辞 (light 通行本 punctuation; characters sourced from the ctext.org 阮元 edition), with a collapsible plain-language gloss
+- **Cast log** — local SwiftData archive with question/notes; the app is fully offline, zero data collection
+- **Visuals** — Dusk Desk warm-black scene + bundled Noto Serif SC, one cinnabar accent
+
+On-device tuning and App Store submission are in progress (#3 / #4).
 
 ## Setup — XcodeGen
 

@@ -15,20 +15,23 @@
 
 暗/浅之选**有意推迟到 Phase 2**(真机、上手判断)。两份都干净通过 `npx @google/design.md lint <file>`。改任何 token 前先用 lint CLI 校验。中文阅读版:`DESIGN.zh.md` / `DESIGN-paper.zh.md`(token 以英文版为准)。
 
-## 当前状态 —— Phase 0/1 staging
+## 当前状态 —— v1 主线可用
 
-依 ADR-0007(build cadence:Coin Harness → I Ching;ADR 全文在私有设计 vault),第一个要造的是 *Coin Harness* —— 一个故意做得很丑的 SceneKit + CoreMotion + CoreHaptics 装置,用来在单枚铜钱原型上调 Settle 的手感。Harness 是一次性的;只有收敛后的物理常数会进入 v1。
+Coin + 六爻两个 Ritual 全流程已在模拟器上跑通:物理掷币 → 六爻累积 → 本卦/变爻 → 变卦 → 释文(周易原文 + 白话对照) → 占卜记录持久化。待办与路线图以 [GitHub Issues](https://github.com/charliezong18/luo/issues) 为准。
 
-Harness 的 Swift 源码已预置在 `Luo/`:
+<p align="center">
+  <img src="docs/screenshots/home.png" width="230" alt="首页">&nbsp;&nbsp;
+  <img src="docs/screenshots/coin.png" width="230" alt="掷币">&nbsp;&nbsp;
+  <img src="docs/screenshots/iching.png" width="230" alt="六爻:本卦→变卦+释文">
+</p>
 
-| 文件 | 职责 |
-|---|---|
-| `LuoApp.swift` | `@main` SwiftUI App 入口 |
-| `HarnessView.swift` | 顶层 SceneView、Settle 指示器、Throw / Reset / Shake 控件、滑块列表 |
-| `CoinHarnessScene.swift` | SceneKit 场景:单枚铜钱 + 桌面 + Settle 检测器 |
-| `PhysicsParams.swift` | 所有可调旋钮的 Observable 模型 |
-| `MotionService.swift` | CoreMotion 封装,持续加速度的摇晃触发 |
-| `HapticsService.swift` | CoreHaptics 封装,settle 闷响 + 翻滚 tick |
+- **物理级掷币** —— SceneKit/PhysX 真实刚体,方孔圆钱 + PBR 古铜材质;摇一摇触发完整投掷(保证公平,不走捷径)
+- **六爻三钱法** —— 掷 6×3 币累积成卦,动爻朱砂标记,本卦→变卦并排呈现
+- **释文层** —— 全 64 卦卦辞 + 384 爻辞(通行本轻标点,字源 ctext.org 阮元本古经),白话对照可开合
+- **占卜记录** —— SwiftData 本地存档,可补记所问与笔记;app 完全离线、零采集
+- **视觉** —— Dusk Desk 暖黑桌面 + 内置 Noto Serif SC,唯一朱砂强调色
+
+真机调校与 App Store 上架推进中(#3 / #4)。
 
 ## 配置 —— XcodeGen
 

@@ -19,8 +19,8 @@
 
 **待办以 [GitHub Issues](https://github.com/charliezong18/luo/issues) 为准**，此处只留索引（勾掉 = issue 已关）：
 
-- [ ] #1 语料标点统一（`ship-blocker`，上架前必须）
-- [ ] #2 README 门面升级：状态更新 + 截图
+- [x] #1 语料标点统一（`ship-blocker`）— 2026-07-04 完成，通行本轻标点，49 行
+- [x] #2 README 门面升级 — 2026-07-04 完成，v1 状态 + 三张截图
 - [ ] #3 真机测试 + TestFlight（阻塞项：Apple Developer 会员未购）
 - [ ] #4 App Store 上架准备（依赖 #3）
 - [ ] #5 LLM 解读层（远期）
@@ -38,3 +38,4 @@
 - 2026-07-04：白话语料改加密交付（BaiHua.enc + 密钥不入库）、git 历史重写（明文清除 + 作者邮箱统一）、LICENSE source-available、repo 转 public
 - 2026-07-04：建立 CLAUDE.md + STATUS.md（第一层状态外化），无代码改动
 - 2026-07-04：待办迁移至 GitHub Issues #1–#6，修正 STATUS 中"384 爻辞 gloss 待做"的过期记载（实际已全量完成）
+- 2026-07-04：关闭 #1（语料标点统一为通行本轻标点，DeepSeek 重断句 + 字符硬校验 + 人工 QA；重断句工作目录 ~/luo-punct-work 可复用）+ #2（README v1 状态 + docs/screenshots/ 三张截图；截图 scaffold 用启动参数 -shot-coin/-shot-pair 临时进 RootView，已 revert，重拍照抄这招）

@@ -17,7 +17,7 @@ The dark/light choice is **deliberately deferred to Phase 2** (real device, judg
 
 ## Current state — Phase 0/1 staging
 
-Per [ADR-0007](../../Library/CloudStorage/GoogleDrive-charliezong18@gmail.com/My%20Drive/2nd%20Brain/Hang/Plans/Divination_App/docs/adr/0007-build-cadence-coin-harness-then-iching.md), the first thing built is a *Coin Harness* — a deliberately ugly SceneKit + CoreMotion + CoreHaptics rig used to tune Settle feel on a single-coin primitive. The Harness is throwaway; only the converged physics constants survive into v1.
+Per ADR-0007 (build cadence: Coin Harness → I Ching; full ADRs live in a private design vault), the first thing built is a *Coin Harness* — a deliberately ugly SceneKit + CoreMotion + CoreHaptics rig used to tune Settle feel on a single-coin primitive. The Harness is throwaway; only the converged physics constants survive into v1.
 
 The Swift sources for the Harness are pre-staged in `Luo/`:
 
@@ -61,3 +61,9 @@ Once running on device, the loop is:
 3. Throw again.
 4. Repeat until Settle reads "like the desk".
 5. Record the converged values; they become `PhysicsScene` constants in v1.
+
+## License — source-available, not open source
+
+The code is public to be read and learned from — it is **not open source**: no rights are granted to redistribute, publish to the App Store (or any other channel), or use commercially. See [LICENSE](LICENSE).
+
+The plain-language interpretation corpus is proprietary; the repo carries only the encrypted `Luo/Resources/BaiHua.enc` (key not published). Builds without the key compile and run normally, gracefully degrading to showing the original 周易 text only.

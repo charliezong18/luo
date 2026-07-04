@@ -17,7 +17,7 @@
 
 ## 当前状态 —— Phase 0/1 staging
 
-依 [ADR-0007](../../Library/CloudStorage/GoogleDrive-charliezong18@gmail.com/My%20Drive/2nd%20Brain/Hang/Plans/Divination_App/docs/adr/0007-build-cadence-coin-harness-then-iching.md),第一个要造的是 *Coin Harness* —— 一个故意做得很丑的 SceneKit + CoreMotion + CoreHaptics 装置,用来在单枚铜钱原型上调 Settle 的手感。Harness 是一次性的;只有收敛后的物理常数会进入 v1。
+依 ADR-0007(build cadence:Coin Harness → I Ching;ADR 全文在私有设计 vault),第一个要造的是 *Coin Harness* —— 一个故意做得很丑的 SceneKit + CoreMotion + CoreHaptics 装置,用来在单枚铜钱原型上调 Settle 的手感。Harness 是一次性的;只有收敛后的物理常数会进入 v1。
 
 Harness 的 Swift 源码已预置在 `Luo/`:
 
@@ -61,3 +61,9 @@ xcodebuild -project Luo.xcodeproj -scheme Luo \
 3. 再 Throw。
 4. 重复,直到 Settle 读起来"像那张桌子"。
 5. 记下收敛值;它们成为 v1 里 `PhysicsScene` 的常数。
+
+## License —— source-available,非开源
+
+代码公开是为了可读、可学习,**不是开源**:不授予再分发、上架(App Store 或其他渠道)或任何商业使用的权利,详见 [LICENSE](LICENSE)。
+
+白话解卦语料是专有内容,repo 里只有加密后的 `Luo/Resources/BaiHua.enc`(密钥不公开)。没有密钥也能正常编译运行,解卦界面会优雅降级为只显示周易原文。

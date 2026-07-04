@@ -1,0 +1,32 @@
+Luo (落) — Source-Available License
+
+Copyright (c) 2026 Charlie Zong. All rights reserved.
+
+This repository is made public so that its source code can be read and
+evaluated. It is NOT open source.
+
+Permitted, free of charge:
+
+  1. Viewing, cloning, and forking this repository within GitHub, as
+     provided by the GitHub Terms of Service.
+  2. Building and running the software privately, on your own devices,
+     for personal, non-commercial evaluation and learning.
+
+Not permitted without prior written permission from the copyright holder:
+
+  1. Redistributing this software, or any modified version of it, in
+     source or binary form, outside GitHub's fork mechanism.
+  2. Submitting this software or any derivative work to the App Store or
+     any other software distribution channel.
+  3. Any commercial use.
+
+The plain-language interpretation corpus shipped as an encrypted resource
+(Luo/Resources/BaiHua.enc) is proprietary content. No license to it is
+granted at all; it is not considered part of the "source code" made
+available for evaluation.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY
+ARISING FROM THE USE OF THE SOFTWARE.

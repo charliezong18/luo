@@ -26,9 +26,9 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.charliezong.luo
-        # Empty team = builds for Simulator without signing. Set your Apple ID
-        # team here (or in Xcode → Signing) before running on a real device.
-        DEVELOPMENT_TEAM: ""
+        # Personal Team (free Apple ID) — signs device builds for sideloading.
+        # Simulator builds ignore it. Free-provisioning 7-day expiry applies.
+        DEVELOPMENT_TEAM: "Q8XV65MMXK"
         CODE_SIGN_STYLE: Automatic
 
   LuoTests:

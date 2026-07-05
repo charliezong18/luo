@@ -138,7 +138,13 @@ struct HarnessView: View {
             get: { motion.isRunning },
             set: { wantsOn in
                 if wantsOn {
-                    motion.start { mag in scene?.applyShake(magnitude: mag) }
+                    motion.start { mag in
+                        if mag >= MotionService.castMagnitude {
+                            scene?.performThrow(vigor: MotionService.vigor(forMagnitude: mag))
+                        } else {
+                            scene?.nudge(magnitude: mag)
+                        }
+                    }
                 } else {
                     motion.stop()
                 }

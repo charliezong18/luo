@@ -11,10 +11,21 @@ final class MotionService: ObservableObject {
     @Published private(set) var isRunning = false
     @Published private(set) var lastShakeMagnitude: Double = 0
 
-    /// Magnitude (g) above which we declare a shake.
-    var shakeThreshold: Double = 1.6
+    /// Magnitude (g) above which we declare a shake worth reacting to at all.
+    /// Light shakes above this only jiggle the resting coins (cosmetic nudge);
+    /// a cast requires `castMagnitude` and up.
+    var shakeThreshold: Double = 1.15
     /// Minimum seconds between two consecutive shake fires.
     var shakeCooldown: TimeInterval = 0.4
+
+    /// Magnitude (g) at which a shake counts as a real fling → full Throw.
+    static let castMagnitude: Double = 2.4
+    /// Maps shake magnitude to `PhysicsScene.performThrow(vigor:)`: the cast
+    /// threshold is the tap baseline (fairness floor), harder flings launch
+    /// visibly higher. `performThrow` clamps the top end.
+    static func vigor(forMagnitude mag: Double) -> Double {
+        1.0 + max(0, mag - castMagnitude) / 3.0
+    }
 
     private let manager = CMMotionManager()
     private let queue = OperationQueue()

@@ -28,9 +28,10 @@ final class IChingRitualViewModel: ObservableObject {
     var isComplete: Bool { if case .complete = state { return true }; return false }
 
     /// Throw the next Yao (tap or shake). No-op while casting or complete.
-    func cast() {
+    /// `vigor` 1.0 = tap baseline; a hard shake passes more for a higher launch.
+    func cast(vigor: Double = 1.0) {
         guard state != .casting, !isComplete else { return }
-        scene.performThrow()
+        scene.performThrow(vigor: vigor)
         state = .casting
     }
 
@@ -48,11 +49,19 @@ final class IChingRitualViewModel: ObservableObject {
         state = castYao.count == 6 ? .complete(Hexagram(yao: castYao)) : .idle
     }
 
-    /// A shake casts the next Yao via the same full Throw as the button (reset +
-    /// random tumble), keeping shaken casts as fair as tapped ones. `cast()` already
-    /// no-ops while coins are in flight or the hexagram is complete.
+    /// Shake handling, graded by how hard the device was shaken: a gentle shake
+    /// only jiggles the resting coins (cosmetic, never counts toward the卦), a
+    /// real fling runs the same full fair Throw as the button — harder fling,
+    /// higher launch. `cast()` already no-ops mid-flight or when complete.
     func startMotion() {
-        motion.start { [weak self] _ in self?.cast() }
+        motion.start { [weak self] mag in
+            guard let self else { return }
+            if mag >= MotionService.castMagnitude {
+                self.cast(vigor: MotionService.vigor(forMagnitude: mag))
+            } else {
+                self.scene.nudge(magnitude: mag)
+            }
+        }
     }
     func stopMotion() { motion.stop() }
 

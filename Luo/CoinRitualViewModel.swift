@@ -36,19 +36,24 @@ final class CoinRitualViewModel: ObservableObject {
     )
 
     /// Throw the coin (tap button or shake).
-    func cast() {
-        scene.performThrow()
+    /// `vigor` 1.0 = tap baseline; a hard shake passes more for a higher launch.
+    func cast(vigor: Double = 1.0) {
+        scene.performThrow(vigor: vigor)
         state = .casting
     }
 
-    /// Start/stop device-shake casting (no-op in simulator). A shake runs the same
-    /// full Throw as the button — reset + lift + random tumble torque — so a shaken
-    /// cast is exactly as fair as a tapped one (a bare upward impulse barely flips
-    /// the coin and biases the result). Ignored mid-flight.
+    /// Start/stop device-shake casting (no-op in simulator). A gentle shake only
+    /// jiggles the resting coin (cosmetic, no reading); a real fling runs the same
+    /// full fair Throw as the button — reset + lift + random tumble — so a shaken
+    /// cast stays exactly as fair as a tapped one. Ignored mid-flight.
     func startMotion() {
-        motion.start { [weak self] _ in
+        motion.start { [weak self] mag in
             guard let self, self.state != .casting else { return }
-            self.cast()
+            if mag >= MotionService.castMagnitude {
+                self.cast(vigor: MotionService.vigor(forMagnitude: mag))
+            } else {
+                self.scene.nudge(magnitude: mag)
+            }
         }
     }
     func stopMotion() { motion.stop() }

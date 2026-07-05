@@ -24,8 +24,14 @@ enum CoinTexture {
 
     static let dim = 1024
 
-    static func inscribedFace() -> Maps { make(inscribed: true) }
-    static func blankFace() -> Maps { make(inscribed: false) }
+    // Generated once per process (the per-pixel Swift loops cost seconds on
+    // device, and every coin/scene shares the same two faces). `LuoApp` warms
+    // these off-main at launch so the first Ritual entry doesn't pay it.
+    private static let inscribedMaps: Maps = make(inscribed: true)
+    private static let blankMaps: Maps = make(inscribed: false)
+
+    static func inscribedFace() -> Maps { inscribedMaps }
+    static func blankFace() -> Maps { blankMaps }
 
     // MARK: - Build
 

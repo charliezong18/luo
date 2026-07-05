@@ -374,15 +374,18 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         let wallMat = SCNMaterial()
         wallMat.diffuse.contents = NSColor_or_UIColor(white: 0, alpha: 0)
         wallMat.transparency = 0
-        let h: CGFloat = 0.14 * s, t: CGFloat = 0.004 * s, span: CGFloat = 0.15 * s
-        let walls: [(SCNVector3, CGFloat, CGFloat)] = [
-            (SCNVector3(span/2, h/2, 0), t, span),   // +X
-            (SCNVector3(-span/2, h/2, 0), t, span),  // -X
-            (SCNVector3(0, h/2, span/2), span, t),   // +Z
-            (SCNVector3(0, h/2, -span/2), span, t),  // -Z
+        // Tall + thick, and closed with a lid: a hard fling must neither clear
+        // the rim nor tunnel through a paper-thin static box at high speed.
+        let h: CGFloat = 0.35 * s, t: CGFloat = 0.02 * s, span: CGFloat = 0.15 * s
+        let walls: [(SCNVector3, CGFloat, CGFloat, CGFloat)] = [
+            (SCNVector3(span/2 + t/2, h/2, 0), t, h, span + 2*t),   // +X
+            (SCNVector3(-span/2 - t/2, h/2, 0), t, h, span + 2*t),  // -X
+            (SCNVector3(0, h/2, span/2 + t/2), span + 2*t, h, t),   // +Z
+            (SCNVector3(0, h/2, -span/2 - t/2), span + 2*t, h, t),  // -Z
+            (SCNVector3(0, h + t/2, 0), span + 2*t, t, span + 2*t), // lid
         ]
-        for (pos, w, l) in walls {
-            let box = SCNBox(width: w, height: h, length: l, chamferRadius: 0)
+        for (pos, w, wh, l) in walls {
+            let box = SCNBox(width: w, height: wh, length: l, chamferRadius: 0)
             box.materials = [wallMat]
             let n = SCNNode(geometry: box)
             n.position = pos
@@ -525,14 +528,24 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         for coinNode in coinNodes {
             guard let body = coinNode.physicsBody else { continue }
             let lift = f * config.throwLinearImpulse * scale
-            let jx = Double.random(in: -0.3...0.3) * lift
-            let jz = Double.random(in: -0.3...0.3) * lift
-            body.applyForce(SCNVector3(CGFloat(jx), CGFloat(lift), CGFloat(jz)),
-                            asImpulse: true)
+            // Torque first — applyTorque also wakes a resting body before the
+            // velocity write below.
             let theta = Double.random(in: 0 ..< 2 * Double.pi)
             body.applyTorque(SCNVector4(CGFloat(cos(theta)), 0, CGFloat(sin(theta)),
                                         CGFloat(config.throwAngularImpulse * f * f * scale)),
                              asImpulse: true)
+            // Lift as a direct velocity change, not an impulse: an impulse into
+            // the bottom coin of a stack just transfers to the coin above it
+            // (Newton's cradle) and the bottom one never moves. A shaken desk
+            // kicks EVERYTHING to the same velocity at once.
+            let m = Double(max(body.mass, 0.0001))
+            let dv = lift / m
+            let jx = Double.random(in: -0.12...0.12) * lift / m
+            let jz = Double.random(in: -0.12...0.12) * lift / m
+            let v = body.velocity
+            body.velocity = SCNVector3(CGFloat(Double(v.x) + jx),
+                                       CGFloat(Double(v.y) + dv),
+                                       CGFloat(Double(v.z) + jz))
         }
     }
 

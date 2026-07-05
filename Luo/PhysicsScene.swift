@@ -48,9 +48,6 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
     /// so post-settle disturbances (a cosmetic nudge, physics jitter) can never
     /// append a duplicate Yao.
     private var armed = false
-    /// True while coins move from a cosmetic `nudge` — suppresses the
-    /// settled→throwing re-arm; cleared once everything is still again.
-    private var nudgeActive = false
     /// A coin that settles leaning (against the containment wall / another coin)
     /// gets re-tossed like a real leaner would be; capped to avoid loops.
     private var retossCount = 0
@@ -458,7 +455,6 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         belowThresholdSince = nil
         throwStartTime = nil
         armed = false
-        nudgeActive = false
         retossCount = 0
         lastPos = Array(repeating: nil, count: coinNodes.count)
         lastQuat = Array(repeating: nil, count: coinNodes.count)
@@ -476,7 +472,6 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
     func performThrow(vigor: Double = 1.0) {
         reset()
         armed = true
-        nudgeActive = false
         retossCount = 0
         let v = min(max(vigor, 1.0), 1.8)
         let spin = 1.0 + (v - 1.0) * 0.5
@@ -501,7 +496,6 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
     /// pipeline, never produces a reading.
     func nudge(fraction: Double) {
         guard currentState == .idle || isSettledState(currentState) else { return }
-        nudgeActive = true
         let f = min(max(fraction, 0), 1)
         let lift = f * config.throwLinearImpulse
         for coinNode in coinNodes {
@@ -562,12 +556,12 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         lastTickTime = time
         if !haveHistory { return }
 
+        // Outside an armed throw the state machine is deliberately deaf: a nudge
+        // or physics jitter moving settled coins must never re-enter the pipeline
+        // (a spurious throwing→settled cycle emits nothing, but strands the VM
+        // in .casting — buttons dead). Only performThrow starts a flight.
         let inFlight = currentState == .throwing || currentState == .settling
-        guard inFlight else {
-            if allStill { nudgeActive = false }
-            if !allStill, isSettledState(currentState), !nudgeActive { publishState(.throwing) }
-            return
-        }
+        guard inFlight else { return }
 
         if throwStartTime == nil { throwStartTime = time }
         let timedOut = time - (throwStartTime ?? time) >= config.settleTimeout

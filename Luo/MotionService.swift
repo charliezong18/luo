@@ -21,7 +21,7 @@ final class MotionService: ObservableObject {
     /// The line exists for fairness only: below it the coins respond physically
     /// but nothing is read (an under-thrown coin barely tumbles, so reading it
     /// would bias the result toward the starting face).
-    static let castMagnitude: Double = 2.4
+    static let castMagnitude: Double = 1.9
     /// Continuous response curve below the cast line: threshold → ~4% of a
     /// throw's lift, cast line → 100%. One straight line, no steps.
     static func liftFraction(forMagnitude mag: Double) -> Double {
@@ -67,7 +67,13 @@ final class MotionService: ObservableObject {
         let mag = sqrt(a.x*a.x + a.y*a.y + a.z*a.z)
         lastShakeMagnitude = mag
         let now = motion.timestamp
-        if mag > shakeThreshold, now - lastFire > shakeCooldown {
+        // A real fling ramps up through nudge territory first — without the
+        // punch-through, the mid-swing sample fires a nudge and its cooldown
+        // swallows the peak, making casts feel like they need herculean force.
+        if mag >= Self.castMagnitude, now - lastFire > 0.15 {
+            lastFire = now
+            onShake?(mag)
+        } else if mag > shakeThreshold, now - lastFire > shakeCooldown {
             lastFire = now
             onShake?(mag)
         }

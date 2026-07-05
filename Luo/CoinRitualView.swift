@@ -13,7 +13,9 @@ struct CoinRitualView: View {
             Theme.deskBackground.ignoresSafeArea()
 
             // Fixed-framing scene (no camera control in the ritual).
-            SceneView(scene: vm.scene.scene, options: [], delegate: vm.scene)
+            // .rendersContinuously: SceneKit physics steps with the render loop;
+            // a paused loop swallows shake impulses until a tap wakes the view.
+            SceneView(scene: vm.scene.scene, options: [.rendersContinuously], delegate: vm.scene)
                 .ignoresSafeArea()
 
             VStack {

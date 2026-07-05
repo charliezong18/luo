@@ -59,7 +59,7 @@ final class IChingRitualViewModel: ObservableObject {
             if mag >= MotionService.castMagnitude {
                 self.cast(vigor: MotionService.vigor(forMagnitude: mag))
             } else {
-                self.scene.nudge(magnitude: mag)
+                self.scene.nudge(fraction: MotionService.liftFraction(forMagnitude: mag))
             }
         }
     }

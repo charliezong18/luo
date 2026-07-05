@@ -494,23 +494,25 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         publishState(.throwing)
     }
 
-    /// Cosmetic jiggle for a light device shake: the resting coins hop a little
-    /// (not enough to flip) and settle again. Pure physics — never arms the
-    /// Throw/Settle pipeline, never produces a reading.
-    func nudge(magnitude: Double) {
+    /// Analog, unrecorded response to a sub-cast shake: the resting coins get a
+    /// `fraction` (0…1) of a real throw's lift — a gentle lift barely stirs them,
+    /// a near-cast fling hops them visibly. Torque grows quadratically so light
+    /// motion doesn't flip faces. Pure physics — never arms the Throw/Settle
+    /// pipeline, never produces a reading.
+    func nudge(fraction: Double) {
         guard currentState == .idle || isSettledState(currentState) else { return }
         nudgeActive = true
-        // ~8–20% of a throw's lift, growing with how hard the shake was.
-        let strength = min(max(magnitude / 8.0, 0.08), 0.20) * config.throwLinearImpulse
+        let f = min(max(fraction, 0), 1)
+        let lift = f * config.throwLinearImpulse
         for coinNode in coinNodes {
             guard let body = coinNode.physicsBody else { continue }
-            let jx = Double.random(in: -0.3...0.3) * strength
-            let jz = Double.random(in: -0.3...0.3) * strength
-            body.applyForce(SCNVector3(CGFloat(jx), CGFloat(strength), CGFloat(jz)),
+            let jx = Double.random(in: -0.3...0.3) * lift
+            let jz = Double.random(in: -0.3...0.3) * lift
+            body.applyForce(SCNVector3(CGFloat(jx), CGFloat(lift), CGFloat(jz)),
                             asImpulse: true)
             let theta = Double.random(in: 0 ..< 2 * Double.pi)
             body.applyTorque(SCNVector4(CGFloat(cos(theta)), 0, CGFloat(sin(theta)),
-                                        CGFloat(config.throwAngularImpulse * 0.06)),
+                                        CGFloat(config.throwAngularImpulse * f * f)),
                              asImpulse: true)
         }
     }

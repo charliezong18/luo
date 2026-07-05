@@ -39,7 +39,7 @@ struct HarnessView: View {
             if let scene {
                 SceneView(
                     scene: scene.scene,
-                    options: [.allowsCameraControl],
+                    options: [.allowsCameraControl, .rendersContinuously],
                     delegate: scene
                 )
             } else {
@@ -142,7 +142,7 @@ struct HarnessView: View {
                         if mag >= MotionService.castMagnitude {
                             scene?.performThrow(vigor: MotionService.vigor(forMagnitude: mag))
                         } else {
-                            scene?.nudge(magnitude: mag)
+                            scene?.nudge(fraction: MotionService.liftFraction(forMagnitude: mag))
                         }
                     }
                 } else {

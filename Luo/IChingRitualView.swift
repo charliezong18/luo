@@ -13,7 +13,9 @@ struct IChingRitualView: View {
     var body: some View {
         ZStack {
             Theme.deskBackground.ignoresSafeArea()
-            SceneView(scene: vm.scene.scene, options: [], delegate: vm.scene)
+            // .rendersContinuously: SceneKit physics steps with the render loop;
+            // a paused loop swallows shake impulses until a tap wakes the view.
+            SceneView(scene: vm.scene.scene, options: [.rendersContinuously], delegate: vm.scene)
                 .ignoresSafeArea()
                 .opacity(sceneOpacity)
 

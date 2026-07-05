@@ -276,6 +276,9 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         body.damping = CGFloat(c.linearDamping)
         body.angularDamping = CGFloat(c.angularDamping)
         body.allowsResting = true
+        // Swept collision for fast motion — a hard fling must not tunnel through
+        // the (static, finite-thickness) floor or walls in a single substep.
+        body.continuousCollisionDetectionThreshold = CGFloat(c.coinThickness * Self.scale)
         node.physicsBody = body
         return node
     }
@@ -363,10 +366,18 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         // pure black so the whole surface reads (not just the key-light hotspot).
         let felt = SCNMaterial(); felt.diffuse.contents = NSColor_or_UIColor(red: 0.17, green: 0.14, blue: 0.10, alpha: 1)
         floor.materials = [felt]
-        let floorNode = SCNNode(geometry: floor)
-        floorNode.physicsBody = SCNPhysicsBody(
-            type: .static, shape: SCNPhysicsShape(geometry: floor, options: nil))
+        let floorNode = SCNNode(geometry: floor)   // visual slab only
         tray.addChildNode(floorNode)
+
+        // The PHYSICS floor is a deep block whose top sits flush with the visual
+        // slab's top — the 0.005-thin visual box is tunnel-able by a hard
+        // downward bounce, and a coin that slips through falls forever.
+        let physFloor = SCNBox(width: 1.5 * s, height: 0.12 * s, length: 1.5 * s, chamferRadius: 0)
+        let physFloorNode = SCNNode()
+        physFloorNode.position = SCNVector3(0, 0.0025 * s - 0.06 * s, 0)
+        physFloorNode.physicsBody = SCNPhysicsBody(
+            type: .static, shape: SCNPhysicsShape(geometry: physFloor, options: nil))
+        tray.addChildNode(physFloorNode)
 
         // Four INVISIBLE containment walls at a small radius, well inside the framed
         // floor, so a hard Throw keeps the coins near center and in view. Fully
@@ -525,27 +536,32 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
             throwStartTime = nil
         }
         let scale = inFlight ? 0.5 : 1.0
-        for coinNode in coinNodes {
+        // Impulses, not velocity writes: `body.velocity` reads back dead (0) under
+        // SwiftUI's SceneView, so read-modify-write silently becomes an absolute
+        // set — repeated light shakes then RESET the fall each fire and ratchet
+        // the coin sky-high. applyForce accumulates correctly with gravity.
+        //
+        // Stacking: a coin carrying others needs a proportionally bigger kick, or
+        // the contact solver hands its momentum to the passenger (Newton's
+        // cradle) and the bottom coin never lifts.
+        let positions = coinNodes.map { $0.presentation.simdWorldPosition }
+        let stackReach = Float(config.coinRadius * Self.scale * 1.3)
+        for (i, coinNode) in coinNodes.enumerated() {
             guard let body = coinNode.physicsBody else { continue }
-            let lift = f * config.throwLinearImpulse * scale
-            // Torque first — applyTorque also wakes a resting body before the
-            // velocity write below.
+            let p = positions[i]
+            let carrying = positions.enumerated().filter { (j, q) in
+                j != i && q.y > p.y
+                    && simd_length(simd_float2(q.x - p.x, q.z - p.z)) < stackReach
+            }.count
+            let lift = f * config.throwLinearImpulse * scale * Double(1 + carrying)
+            let jx = Double.random(in: -0.12...0.12) * lift
+            let jz = Double.random(in: -0.12...0.12) * lift
+            body.applyForce(SCNVector3(CGFloat(jx), CGFloat(lift), CGFloat(jz)),
+                            asImpulse: true)
             let theta = Double.random(in: 0 ..< 2 * Double.pi)
             body.applyTorque(SCNVector4(CGFloat(cos(theta)), 0, CGFloat(sin(theta)),
                                         CGFloat(config.throwAngularImpulse * f * f * scale)),
                              asImpulse: true)
-            // Lift as a direct velocity change, not an impulse: an impulse into
-            // the bottom coin of a stack just transfers to the coin above it
-            // (Newton's cradle) and the bottom one never moves. A shaken desk
-            // kicks EVERYTHING to the same velocity at once.
-            let m = Double(max(body.mass, 0.0001))
-            let dv = lift / m
-            let jx = Double.random(in: -0.12...0.12) * lift / m
-            let jz = Double.random(in: -0.12...0.12) * lift / m
-            let v = body.velocity
-            body.velocity = SCNVector3(CGFloat(Double(v.x) + jx),
-                                       CGFloat(Double(v.y) + dv),
-                                       CGFloat(Double(v.z) + jz))
         }
     }
 
@@ -577,6 +593,20 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
             let pres = coinNode.presentation
             let p = pres.simdWorldTransform.columns.3
             let posV = simd_float3(p.x, p.y, p.z)
+            // Safety net: a coin that somehow escaped below the desk gets put
+            // back instead of falling forever (physics glitches must not eat
+            // coins). Logged so escapes stay visible in the device log.
+            if posV.y < Float(-0.05 * Self.scale) {
+                NSLog("PhysicsScene: coin \(i) fell through the floor (y=\(posV.y)) — rescuing")
+                coinNode.position = Self.spawnPosition(config, index: i)
+                coinNode.physicsBody?.velocity = SCNVector3Zero
+                coinNode.physicsBody?.angularVelocity = SCNVector4Zero
+                coinNode.physicsBody?.resetTransform()
+                lastPos[i] = nil
+                lastQuat[i] = nil
+                allStill = false
+                continue
+            }
             let quat = pres.simdOrientation
             if haveHistory, dt > 0, let lp = lastPos[i], let lq = lastQuat[i] {
                 let linSpeed = Double(simd_length(posV - lp) / dt) / Self.scale

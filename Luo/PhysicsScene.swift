@@ -53,6 +53,15 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
     private var retossCount = 0
     private static let flatUpDotThreshold: Float = 0.75
     private static let maxRetosses = 2
+    /// A tilted coin often lies flat on its own within a second or two — give it
+    /// this much stillness before intervening (avoids the "settles then weirdly
+    /// pops back up" look).
+    private static let leanHoldSeconds: TimeInterval = 1.4
+    /// Cumulative angular travel per coin during the current flight (rad). A
+    /// flight only records if EVERY coin travelled at least `tumbleThreshold` —
+    /// 翻了才算: fairness is judged by what the coins did, not by input force.
+    private var cumRotation: [Double] = []
+    private static let tumbleThreshold: Double = 4.0
     // Per-coin previous-frame presentation state, for velocity-free stillness.
     private var lastPos: [simd_float3?] = []
     private var lastQuat: [simd_quatf?] = []
@@ -456,6 +465,7 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         throwStartTime = nil
         armed = false
         retossCount = 0
+        cumRotation = Array(repeating: 0, count: coinNodes.count)
         lastPos = Array(repeating: nil, count: coinNodes.count)
         lastQuat = Array(repeating: nil, count: coinNodes.count)
         dollyCamera(toSettled: false, duration: 0.5)
@@ -464,62 +474,77 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
 
     /// Launch the coin: a center lift impulse for hang time plus a tumble torque
     /// about a random horizontal axis, so it flips face-over-face like a flicked
-    /// coin rather than popping straight up.
-    ///
-    /// `vigor` scales the launch (1.0 = the tap baseline, which already tumbles
-    /// fully — fairness floor). A hard device shake passes >1 so a real fling
-    /// visibly sends the coins higher; it can only add energy, never remove it.
-    func performThrow(vigor: Double = 1.0) {
+    /// coin rather than popping straight up. The button's fixed impulse always
+    /// tumbles fully, so a tapped Throw always records.
+    func performThrow() {
         reset()
         armed = true
         retossCount = 0
-        let v = min(max(vigor, 1.0), 1.8)
-        let spin = 1.0 + (v - 1.0) * 0.5
         for coinNode in coinNodes {
             guard let body = coinNode.physicsBody else { continue }
             let jitter = Double.random(in: -config.throwHorizontalJitter...config.throwHorizontalJitter)
             let jitter2 = Double.random(in: -config.throwHorizontalJitter...config.throwHorizontalJitter)
             body.applyForce(SCNVector3(CGFloat(jitter),
-                                       CGFloat(config.throwLinearImpulse * v),
+                                       CGFloat(config.throwLinearImpulse),
                                        CGFloat(jitter2)), asImpulse: true)
             let theta = Double.random(in: 0 ..< 2 * Double.pi)
             body.applyTorque(SCNVector4(CGFloat(cos(theta)), 0, CGFloat(sin(theta)),
-                                        CGFloat(config.throwAngularImpulse * spin)), asImpulse: true)
+                                        CGFloat(config.throwAngularImpulse)), asImpulse: true)
         }
         publishState(.throwing)
     }
 
-    /// Analog, unrecorded response to a sub-cast shake: the resting coins get a
-    /// `fraction` (0…1) of a real throw's lift — a gentle lift barely stirs them,
-    /// a near-cast fling hops them visibly. Torque grows quadratically so light
-    /// motion doesn't flip faces. Pure physics — never arms the Throw/Settle
-    /// pipeline, never produces a reading.
-    func nudge(fraction: Double) {
-        guard currentState == .idle || isSettledState(currentState) else { return }
-        let f = min(max(fraction, 0), 1)
-        let lift = f * config.throwLinearImpulse
+    /// Continuous physical coupling to the device shake — one straight line, no
+    /// tiers. `fraction` scales a full throw's impulse (torque scales with f² so
+    /// a gentle dab stirs without flipping). From rest a plausibly-castable
+    /// impulse starts an armed flight from wherever the coins lie (no respawn —
+    /// real coins get flung from where they sit); mid-flight impulses keep
+    /// feeding energy in, so the tray follows the hand. Whether the flight
+    /// RECORDS is decided at settle purely by what the coins did (`tumbled`).
+    func shakeImpulse(fraction: Double) {
+        let f = min(max(fraction, 0), 1.8)
+        let inFlight = currentState == .throwing || currentState == .settling
+        if !inFlight {
+            // Below this a coin physically cannot tumble to a countable flight;
+            // respond with deaf-to-the-state-machine jiggle only.
+            if f >= 0.35 {
+                armed = true
+                retossCount = 0
+                cumRotation = Array(repeating: 0, count: coinNodes.count)
+                belowThresholdSince = nil
+                throwStartTime = nil
+                dollyCamera(toSettled: false, duration: 0.3)
+                publishState(.throwing)
+            }
+        } else {
+            // Keep feeding energy: push the settle-timeout window forward so a
+            // sustained shake can't get force-read mid-motion.
+            throwStartTime = nil
+        }
+        let scale = inFlight ? 0.5 : 1.0
         for coinNode in coinNodes {
             guard let body = coinNode.physicsBody else { continue }
+            let lift = f * config.throwLinearImpulse * scale
             let jx = Double.random(in: -0.3...0.3) * lift
             let jz = Double.random(in: -0.3...0.3) * lift
             body.applyForce(SCNVector3(CGFloat(jx), CGFloat(lift), CGFloat(jz)),
                             asImpulse: true)
             let theta = Double.random(in: 0 ..< 2 * Double.pi)
             body.applyTorque(SCNVector4(CGFloat(cos(theta)), 0, CGFloat(sin(theta)),
-                                        CGFloat(config.throwAngularImpulse * f * f)),
+                                        CGFloat(config.throwAngularImpulse * f * f * scale)),
                              asImpulse: true)
         }
     }
 
-    /// Re-flick a coin that settled leaning, the way a hand would pick up and
-    /// re-toss a leaner. Softer than a full throw; runs inside an armed cast.
+    /// Gently unstick a coin that settled leaning — a small tip-over nudge, the
+    /// way a fingertip would lay a leaner flat, NOT a re-throw (no mid-air spin).
     private func retoss(_ coinNode: SCNNode) {
         guard let body = coinNode.physicsBody else { return }
-        body.applyForce(SCNVector3(0, CGFloat(config.throwLinearImpulse * 0.6), 0),
+        body.applyForce(SCNVector3(0, CGFloat(config.throwLinearImpulse * 0.22), 0),
                         asImpulse: true)
         let theta = Double.random(in: 0 ..< 2 * Double.pi)
         body.applyTorque(SCNVector4(CGFloat(cos(theta)), 0, CGFloat(sin(theta)),
-                                    CGFloat(config.throwAngularImpulse * 0.8)),
+                                    CGFloat(config.throwAngularImpulse * 0.3)),
                          asImpulse: true)
     }
 
@@ -544,6 +569,9 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
                 let linSpeed = Double(simd_length(posV - lp) / dt) / Self.scale
                 let dotq = min(1, abs(simd_dot(quat.vector, lq.vector)))
                 let angSpeed = Double(2 * acos(dotq) / dt)
+                if currentState == .throwing || currentState == .settling, i < cumRotation.count {
+                    cumRotation[i] += angSpeed * Double(dt)
+                }
                 if !(linSpeed < config.settleLinearThreshold && angSpeed < config.settleAngularThreshold) {
                     allStill = false
                 }
@@ -575,14 +603,20 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         let heldStill = belowThresholdSince.map { time - $0 >= config.settleHoldSeconds } ?? false
 
         if heldStill || timedOut {
+            let tumbledAll = !cumRotation.isEmpty
+                && cumRotation.allSatisfy { $0 >= Self.tumbleThreshold }
             // A coin resting tilted past the flatness threshold (leaning on the
-            // wall or another coin) has no honest face — re-toss it like a hand
-            // would, instead of guessing from the lean direction.
-            if armed, retossCount < Self.maxRetosses {
+            // wall or another coin) has no honest face. Only worth fixing on a
+            // flight that will record — and only after giving the coin time to
+            // lie flat by itself (a tipping coin usually does within a second
+            // or two; intervening instantly looks like it "pops back up").
+            if armed, tumbledAll, retossCount < Self.maxRetosses {
                 let leaning = coinNodes.filter {
                     abs($0.presentation.simdWorldTransform.columns.1.y) < Self.flatUpDotThreshold
                 }
                 if !leaning.isEmpty {
+                    let stillFor = belowThresholdSince.map { time - $0 } ?? 0
+                    if stillFor < Self.leanHoldSeconds, !timedOut { return }
                     retossCount += 1
                     belowThresholdSince = nil
                     throwStartTime = time   // restart the settle-timeout window
@@ -594,8 +628,11 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
             let results = makeResults()
             belowThresholdSince = nil
             throwStartTime = nil
-            // Cinematic pull to a top-down view so the settled 钱文 reads clearly.
-            dollyCamera(toSettled: true, duration: 1.1)
+            if armed, tumbledAll {
+                // Cinematic pull to a top-down view so the settled 钱文 reads
+                // clearly — the reading moment. Void flights stay framed wide.
+                dollyCamera(toSettled: true, duration: 1.1)
+            }
             publishState(.settled(results.first?.faceUp ?? .heads))
             if armed {
                 armed = false
@@ -624,7 +661,9 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
             return ThrowResult(id: i,
                                position: realPos,
                                orientation: coinNode.presentation.simdOrientation,
-                               faceUp: face(of: coinNode))
+                               faceUp: face(of: coinNode),
+                               tumbled: i < cumRotation.count
+                                   && cumRotation[i] >= Self.tumbleThreshold)
         }
     }
 

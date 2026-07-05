@@ -35,25 +35,18 @@ final class CoinRitualViewModel: ObservableObject {
         onStateChange: { [weak self] s in self?.handleStateChange(s) }
     )
 
-    /// Throw the coin (tap button or shake).
-    /// `vigor` 1.0 = tap baseline; a hard shake passes more for a higher launch.
-    func cast(vigor: Double = 1.0) {
-        scene.performThrow(vigor: vigor)
+    /// Throw the coin (button).
+    func cast() {
+        scene.performThrow()
         state = .casting
     }
 
-    /// Start/stop device-shake casting (no-op in simulator). A gentle shake only
-    /// jiggles the resting coin (cosmetic, no reading); a real fling runs the same
-    /// full fair Throw as the button — reset + lift + random tumble — so a shaken
-    /// cast stays exactly as fair as a tapped one. Ignored mid-flight.
+    /// Pure linear shake coupling (no-op in simulator): every shake streams a
+    /// proportional impulse into the scene. Whether a flight records is decided
+    /// by the physics outcome (the coin tumbled), not by input force.
     func startMotion() {
         motion.start { [weak self] mag in
-            guard let self, self.state != .casting else { return }
-            if mag >= MotionService.castMagnitude {
-                self.cast(vigor: MotionService.vigor(forMagnitude: mag))
-            } else {
-                self.scene.nudge(fraction: MotionService.liftFraction(forMagnitude: mag))
-            }
+            self?.scene.shakeImpulse(fraction: MotionService.impulseFraction(forMagnitude: mag))
         }
     }
     func stopMotion() { motion.stop() }
@@ -62,6 +55,11 @@ final class CoinRitualViewModel: ObservableObject {
 
     private func handleSettle(_ results: [ThrowResult]) {
         guard let first = results.first else { return }
+        guard first.tumbled else {
+            // 翻转不充分 — not a cast; the coin lies where it fell, no reading.
+            if state == .casting { state = .idle }
+            return
+        }
         haptics.playSettleThunk()
         state = .result(Yinyang(first.faceUp))
         hasCast = true

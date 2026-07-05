@@ -13,25 +13,17 @@ final class MotionService: ObservableObject {
 
     /// Magnitude (g) above which motion reaches the coins at all. Low on purpose:
     /// a gentle lift of the device should already stir them (fully analog feel).
-    var shakeThreshold: Double = 0.35
-    /// Minimum seconds between two consecutive shake fires.
-    var shakeCooldown: TimeInterval = 0.3
+    var shakeThreshold: Double = 0.25
+    /// Minimum seconds between fires. Short so a sustained shake streams energy
+    /// into the scene semi-continuously — the tray follows the hand.
+    var shakeCooldown: TimeInterval = 0.15
 
-    /// Magnitude (g) at which a shake counts as a real fling → recorded Throw.
-    /// The line exists for fairness only: below it the coins respond physically
-    /// but nothing is read (an under-thrown coin barely tumbles, so reading it
-    /// would bias the result toward the starting face).
-    static let castMagnitude: Double = 1.9
-    /// Continuous response curve below the cast line: threshold → ~4% of a
-    /// throw's lift, cast line → 100%. One straight line, no steps.
-    static func liftFraction(forMagnitude mag: Double) -> Double {
-        let f = (mag - 0.35) / (castMagnitude - 0.35)
-        return min(max(f, 0.04), 1.0)
-    }
-    /// Above the cast line the same line keeps climbing: harder fling, higher
-    /// launch. `performThrow` clamps the top end (1.8×).
-    static func vigor(forMagnitude mag: Double) -> Double {
-        1.0 + max(0, mag - castMagnitude) / 3.0
+    /// Pure linear input curve, no tiers: device g → fraction of a full throw's
+    /// impulse. 1.9g (a decisive fling) ≈ 100%; harder keeps climbing (the scene
+    /// clamps at 1.8×). Whether a Throw *records* is decided by the physics
+    /// outcome — did every coin actually tumble — not by input force.
+    static func impulseFraction(forMagnitude mag: Double) -> Double {
+        mag / 1.9
     }
 
     private let manager = CMMotionManager()
@@ -67,13 +59,7 @@ final class MotionService: ObservableObject {
         let mag = sqrt(a.x*a.x + a.y*a.y + a.z*a.z)
         lastShakeMagnitude = mag
         let now = motion.timestamp
-        // A real fling ramps up through nudge territory first — without the
-        // punch-through, the mid-swing sample fires a nudge and its cooldown
-        // swallows the peak, making casts feel like they need herculean force.
-        if mag >= Self.castMagnitude, now - lastFire > 0.15 {
-            lastFire = now
-            onShake?(mag)
-        } else if mag > shakeThreshold, now - lastFire > shakeCooldown {
+        if mag > shakeThreshold, now - lastFire > shakeCooldown {
             lastFire = now
             onShake?(mag)
         }

@@ -15,6 +15,10 @@ struct ThrowResult {
     /// Which face landed up. Binary by design — a flat tray makes an edge landing
     /// vanishingly unlikely, and `PhysicsScene` collapses it to the nearer face.
     let faceUp: CoinFace
+    /// Whether this coin actually tumbled enough in flight for the landing to be
+    /// a fair random read (翻了才算). A gentle hop that never flips reports
+    /// `false`, and the ViewModels discard the whole Throw instead of reading it.
+    let tumbled: Bool
 }
 
 /// Which face of the coin is up. `edge` exists only for the live face reader; a

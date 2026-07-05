@@ -27,11 +27,10 @@ final class IChingRitualViewModel: ObservableObject {
 
     var isComplete: Bool { if case .complete = state { return true }; return false }
 
-    /// Throw the next Yao (tap or shake). No-op while casting or complete.
-    /// `vigor` 1.0 = tap baseline; a hard shake passes more for a higher launch.
-    func cast(vigor: Double = 1.0) {
+    /// Throw the next Yao (button). No-op while casting or complete.
+    func cast() {
         guard state != .casting, !isComplete else { return }
-        scene.performThrow(vigor: vigor)
+        scene.performThrow()
         state = .casting
     }
 
@@ -49,18 +48,13 @@ final class IChingRitualViewModel: ObservableObject {
         state = castYao.count == 6 ? .complete(Hexagram(yao: castYao)) : .idle
     }
 
-    /// Shake handling, graded by how hard the device was shaken: a gentle shake
-    /// only jiggles the resting coins (cosmetic, never counts toward the卦), a
-    /// real fling runs the same full fair Throw as the button — harder fling,
-    /// higher launch. `cast()` already no-ops mid-flight or when complete.
+    /// Pure linear shake coupling: every shake streams a proportional impulse
+    /// into the scene. Whether a flight records a Yao is decided by the physics
+    /// outcome (every coin tumbled), not by input force — see handleSettle.
     func startMotion() {
         motion.start { [weak self] mag in
-            guard let self else { return }
-            if mag >= MotionService.castMagnitude {
-                self.cast(vigor: MotionService.vigor(forMagnitude: mag))
-            } else {
-                self.scene.nudge(fraction: MotionService.liftFraction(forMagnitude: mag))
-            }
+            guard let self, !self.isComplete else { return }
+            self.scene.shakeImpulse(fraction: MotionService.impulseFraction(forMagnitude: mag))
         }
     }
     func stopMotion() { motion.stop() }
@@ -68,6 +62,11 @@ final class IChingRitualViewModel: ObservableObject {
     // MARK: - PhysicsScene callbacks
 
     private func handleSettle(_ results: [ThrowResult]) {
+        guard results.allSatisfy(\.tumbled) else {
+            // 翻转不充分 — not a cast. The coins lie where they fell; no Yao.
+            if state == .casting { state = .idle }
+            return
+        }
         haptics.playSettleThunk()
         appendThrow(results.map { $0.faceUp })
     }

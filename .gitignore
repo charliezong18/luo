@@ -32,3 +32,6 @@ Pods/
 # Editor / IDE
 .vscode/
 .idea/
+
+# App Store screenshot staging (regenerate from the simulator; not source)
+.appstore-shots/

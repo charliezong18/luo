@@ -1,0 +1,74 @@
+/* Dusk Desk — tokens mirror DESIGN.md. Edit tokens there first, then sync here. */
+:root {
+  --primary: #ECE3D2;
+  --secondary: #9A8F7C;
+  --tertiary: #DC6A4B;
+  --neutral: #14110D;
+  --surface-raised: #211B14;
+  --hairline: #37291A;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --serif: "Noto Serif SC", "Songti SC", "Source Han Serif SC", Georgia, serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 24px 96px;
+  background: var(--neutral);
+  color: var(--primary);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+main { max-width: 640px; margin: 0 auto; }
+
+header { padding: 88px 0 40px; border-bottom: 1px solid var(--hairline); margin-bottom: 40px; }
+
+.mark {
+  font-family: var(--serif);
+  font-size: 64px;
+  font-weight: 600;
+  line-height: 1.05;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.tagline { color: var(--secondary); margin: 12px 0 0; font-size: 17px; }
+
+h1 { font-size: 30px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 8px; }
+h2 { font-size: 21px; font-weight: 600; margin: 40px 0 12px; }
+
+.updated { color: var(--secondary); font-size: 14px; margin: 0 0 40px; }
+
+p { margin: 0 0 16px; }
+
+.lede { font-family: var(--serif); font-size: 20px; line-height: 1.9; color: var(--primary); }
+
+a { color: var(--tertiary); text-decoration: none; border-bottom: 1px solid transparent; }
+a:hover { border-bottom-color: var(--tertiary); }
+
+.card {
+  background: var(--surface-raised);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 24px 0;
+}
+
+.card p:last-child { margin-bottom: 0; }
+
+footer {
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid var(--hairline);
+  color: var(--secondary);
+  font-size: 14px;
+}
+
+footer a { color: var(--secondary); }
+footer a:hover { color: var(--tertiary); border-bottom-color: var(--tertiary); }
+
+.lang { float: right; font-size: 14px; }

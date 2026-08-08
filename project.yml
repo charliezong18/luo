@@ -12,6 +12,11 @@ settings:
     SWIFT_VERSION: "5.0"
     TARGETED_DEVICE_FAMILY: "1"            # iPhone only
     GENERATE_INFOPLIST_FILE: YES
+    # GENERATE_INFOPLIST_FILE omits CFBundleShortVersionString / CFBundleVersion
+    # unless these are set — App Store Connect rejects uploads without them.
+    # Bump CURRENT_PROJECT_VERSION for every upload; it must be unique per build.
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
     INFOPLIST_KEY_NSMotionUsageDescription: "落 reads device motion so your shake casts the coin."
     INFOPLIST_KEY_UILaunchScreen_Generation: YES
     INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
@@ -26,8 +31,10 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.charliezong.luo
-        # Personal Team (free Apple ID) — signs device builds for sideloading.
-        # Simulator builds ignore it. Free-provisioning 7-day expiry applies.
+        # Apple Developer Program (paid, enrolled 2026-08-08) — signs device
+        # builds and App Store / TestFlight distribution. Simulator builds ignore
+        # it. Same team ID as the old free Personal Team: enrolling upgrades the
+        # team in place. Provisioning profiles now last a year, not 7 days.
         DEVELOPMENT_TEAM: "Q8XV65MMXK"
         CODE_SIGN_STYLE: Automatic
 

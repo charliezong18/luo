@@ -15,6 +15,9 @@ enum IChingCastState: Equatable {
 final class IChingRitualViewModel: ObservableObject {
     @Published private(set) var state: IChingCastState = .idle
     @Published private(set) var castYao: [Yao] = []
+    /// The 3 coin faces behind each cast Yao, in cast order — the UI shows them
+    /// as a 阳/阴 readout so nobody has to read the 钱文 off the coins.
+    @Published private(set) var castFaces: [[CoinFace]] = []
 
     private let haptics = HapticsService()
     private let motion = MotionService()
@@ -36,6 +39,7 @@ final class IChingRitualViewModel: ObservableObject {
 
     func reset() {
         castYao = []
+        castFaces = []
         state = .idle
         scene.reset()
     }
@@ -45,6 +49,7 @@ final class IChingRitualViewModel: ObservableObject {
     func appendThrow(_ faces: [CoinFace]) {
         guard castYao.count < 6 else { return }
         castYao.append(Yao(faces: faces))
+        castFaces.append(faces)
         state = castYao.count == 6 ? .complete(Hexagram(yao: castYao)) : .idle
     }
 

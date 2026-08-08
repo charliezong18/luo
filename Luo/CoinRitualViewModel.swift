@@ -1,9 +1,9 @@
 import SwiftUI
 import SceneKit
 
-/// Ritual semantics for a single coin. Heads → 阳, tails → 阴 (edge can't happen
-/// on a flat tray; folded into 阳). Kept in the VM layer so PhysicsScene /
-/// ThrowResult stay free of divination meaning.
+/// Ritual semantics for a single coin. Heads (背面) → 阳, tails (字面) → 阴 —
+/// 背为阳、字为阴 (edge can't happen on a flat tray; folded into 阳). Kept in the
+/// VM layer so PhysicsScene / ThrowResult stay free of divination meaning.
 enum Yinyang: Equatable {
     case yang, yin
 

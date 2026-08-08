@@ -30,6 +30,14 @@ final class IChingRitualViewModelTests: XCTestCase {
         vm.reset()
         XCTAssertEqual(vm.state, .idle)
         XCTAssertTrue(vm.castYao.isEmpty)
+        XCTAssertTrue(vm.castFaces.isEmpty)
+    }
+
+    func testCastFacesRecordEachThrow() {
+        let vm = IChingRitualViewModel()
+        vm.appendThrow(youngYang)
+        vm.appendThrow(youngYin)
+        XCTAssertEqual(vm.castFaces, [youngYang, youngYin])
     }
 
     func testSeventhThrowIsIgnored() {

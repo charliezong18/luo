@@ -237,9 +237,9 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
             m.isDoubleSided = true
             return m
         }
-        // Material order is front / back / sides / chamfer. The back cap lands +Y-up at
-        // rest (the physics up-face the settle reader calls 阳/heads), so it wears the
-        // plain 背面; the front cap (阴) carries the 乾隆通宝 字面.
+        // Material order is front / back / sides / chamfer. The front cap sits +Y-up at
+        // rest and carries the 開元通寶 字面 (which the settle reader calls 阴/tails —
+        // 背为阳、字为阴); the back cap wears the plain 背面 (阳/heads).
         coin.materials = [faceMaterial(CoinTexture.inscribedFace()),
                           faceMaterial(CoinTexture.blankFace()),
                           edge, edge]
@@ -253,8 +253,8 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
         // felt; the parent node carries the physics body. SCNShape extrudes in the XY
         // plane along +Z, so tip it a quarter-turn about X to lay it flat with its faces
         // along ±Y (the cylinder-physics up-axis the settle reader uses). The −quarter
-        // turn puts the inscribed 字面 (front cap) up at rest — the coin reads as 阳 and
-        // shows its face before the first throw; a flip to 背面 reads as 阴, consistently.
+        // turn puts the inscribed 字面 (front cap) up at rest — the coin shows its face
+        // before the first throw; 字面 up reads 阴, the plain 背面 up reads 阳.
         let visual = SCNNode(geometry: coin)
         visual.name = "coinVisual"
         visual.eulerAngles = SCNVector3(-CGFloat.pi / 2, 0, 0)
@@ -692,8 +692,10 @@ final class PhysicsScene: NSObject, ObservableObject, SCNSceneRendererDelegate {
     /// The settled face — binary by the sign of the coin's up-vector. On a flat
     /// tray an edge landing is vanishingly unlikely, so we don't model `.edge`
     /// here (that case exists only for a live mid-flight reader, unused for now).
+    /// +Y up is the inscribed 字面, which 三钱法 reads as 阴/tails; the plain 背面
+    /// up reads 阳/heads (背为阳、字为阴 — see Yao.swift).
     private func face(of coinNode: SCNNode) -> CoinFace {
-        coinNode.presentation.simdWorldTransform.columns.1.y >= 0 ? .heads : .tails
+        coinNode.presentation.simdWorldTransform.columns.1.y >= 0 ? .tails : .heads
     }
 
     private func makeResults() -> [ThrowResult] {

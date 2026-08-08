@@ -21,6 +21,7 @@ struct IChingRitualView: View {
 
             VStack(spacing: 0) {
                 hint
+                latestThrowReadout
                 if case .complete(let hex) = vm.state {
                     // Scroll the (now long) 卦辞/爻辞/白话 so it can't push 再占
                     // off-screen; the button stays pinned at the bottom.
@@ -70,18 +71,45 @@ struct IChingRitualView: View {
         }
     }
 
-    /// In-progress tally: a compact horizontal row read left→right in cast order
-    /// (throw 1 … throw 6), small and dim, sitting just under the hint at the top
-    /// so it never overlaps the coins in the center. 动爻 tinted cinnabar.
-    private var tallyRow: some View {
-        HStack(spacing: 14) {
-            ForEach(Array(vm.castYao.enumerated()), id: \.offset) { _, yao in
-                Text(yao.glyph)
-                    .font(Theme.serif(28))
-                    .foregroundColor((yao.isChanging ? Theme.cinnabar : Theme.ink).opacity(0.7))
+    /// The just-settled Throw's 3 coin faces spelled out (e.g. 阳 阳 阴), under the
+    /// hint — the reading comes to the user instead of squinting at the 钱文.
+    /// Hidden while coins fly and once the 本卦 takes over the screen.
+    private var latestThrowReadout: some View {
+        Group {
+            if vm.state == .idle, let faces = vm.castFaces.last {
+                HStack(spacing: 8) {
+                    ForEach(Array(faces.enumerated()), id: \.offset) { _, face in
+                        Text(Yinyang(face).glyph)
+                            .font(Theme.serif(15))
+                            .foregroundColor(Theme.ink.opacity(0.7))
+                    }
+                }
+                .padding(.top, 8)
+                .transition(.opacity)
             }
         }
-        .frame(height: 34)
+    }
+
+    /// In-progress tally: a compact horizontal row read left→right in cast order
+    /// (throw 1 … throw 6), small and dim, sitting just under the hint at the top
+    /// so it never overlaps the coins in the center. 动爻 tinted cinnabar; each
+    /// Yao carries its Throw's 3 coin faces as a tiny 阳/阴 caption.
+    private var tallyRow: some View {
+        HStack(spacing: 14) {
+            ForEach(Array(vm.castYao.enumerated()), id: \.offset) { i, yao in
+                VStack(spacing: 2) {
+                    Text(yao.glyph)
+                        .font(Theme.serif(28))
+                        .foregroundColor((yao.isChanging ? Theme.cinnabar : Theme.ink).opacity(0.7))
+                    if i < vm.castFaces.count {
+                        Text(vm.castFaces[i].map { Yinyang($0).glyph }.joined())
+                            .font(Theme.serif(10))
+                            .foregroundColor(Theme.ink.opacity(0.45))
+                    }
+                }
+            }
+        }
+        .frame(height: 52)
         .padding(.top, 6)
     }
 

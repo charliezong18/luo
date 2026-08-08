@@ -2,7 +2,7 @@
 
 > 跨 session 状态交接文件。每次工作 session 收工前更新（规矩见 CLAUDE.md）。
 
-**更新于：2026-07-04**（由 Claude 根据 git history 整理初版）
+**更新于：2026-07-10**
 
 ## 当前状态
 
@@ -38,6 +38,7 @@
 
 ## Session 日志（最近 5 条，旧的删掉）
 
+- 2026-07-10：朋友试用反馈「硬币正反不明显」→ 不动贴图，改 UI 读数：六爻落定后 hint 下显示本掷「阳 阳 阴」+ 爻堆每爻带三枚小字记录（castFaces 存进 VM，两处 View 显示）。顺带修出一个正反颠倒 bug：`PhysicsScene.face(of:)` 原来把字面朝上读成 heads/阳，与传统三钱法（**背为阳、字为阴**，Yao.swift 注释本来就这么写）相反，已翻转判定并订正相关注释。历史考证：开元通宝真钱背面就是光背，现有两面贴图无需改。截图 scaffold（-shot-tally）已 revert。
 - 2026-07-05：**首次真机运行成功**（免费 Personal Team 侧载，MacBook + iPhone"MKB"）。首测三反馈当晚修毕（#7 贴图缓存/预热、#8 摇一摇分级+多记一爻门闩、#9 斜靠重掷）。摇感常量（castMagnitude 2.4g、nudge 强度、vigor 封顶 1.8×）在 MotionService/PhysicsScene，待 Charlie 真机回归再调。
 
 - 2026-07-04：白话语料改加密交付（BaiHua.enc + 密钥不入库）、git 历史重写（明文清除 + 作者邮箱统一）、LICENSE source-available、repo 转 public

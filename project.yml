@@ -20,6 +20,12 @@ settings:
     INFOPLIST_KEY_UILaunchScreen_Generation: YES
     INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
     INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+    # Export compliance, declared by Charlie 2026-08-08 in App Store Connect
+    # ("None of the algorithms mentioned above"): the only crypto here is
+    # CryptoKit AES-GCM for the 白话 corpus, i.e. encryption provided by Apple's
+    # OS — nothing proprietary and no bundled implementation of our own. Setting
+    # this stops TestFlight asking on every upload. Revisit if that ever changes.
+    INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
 
 targets:
   Luo:

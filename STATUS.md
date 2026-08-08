@@ -22,7 +22,7 @@
 - [x] #1 语料标点统一（`ship-blocker`）— 2026-07-04 完成，通行本轻标点，49 行
 - [x] #2 README 门面升级 — 2026-07-04 完成，v1 状态 + 三张截图
 - [x] #3 真机测试 + TestFlight — 2026-08-08 完成。真机装机 + TestFlight 内部测试全通
-- [ ] #4 App Store 上架准备 — **材料已全部填完，「Add for Review」已激活，等 Charlie 按提交**（详见下方 8/8 日志）
+- [ ] #4 App Store 上架准备 — **2026-08-08 已提交审核（Waiting for Review），发布方式＝手动**（详见下方 8/8 日志）
 - [ ] #5 LLM 解读层（远期）
 - [x] #6 再占后释文 toggle 不重置 — 2026-07-04 完成，一行重置
 - [x] #7 首次进 Ritual 卡 5 秒+（真机首测发现）— 2026-07-05 完成，贴图 static 缓存 + 启动预热
@@ -44,7 +44,10 @@
   **两个坑**：① `Sign-in required` 默认是**勾着**的，落无登录，不取消必被驳回。② 截图脚手架（`-shot-*` 启动参数 + `seedForScreenshot`）拍完已整块删除，**别让它进生产包**；下次要拍照抄这招：喂 `IChingRitualViewModel.appendThrow` 这个纯函数缝可以不跑物理直接摆出一卦。
   **同日稍后全部补齐**：Category＝Lifestyle（主）／Reference（次，随版本可改）｜Age Rating **4+**（7 步问卷全 NONE；第 6 步「概率类活动」查过定义——Apple 的 Simulated Gambling 指**下注博彩**，落掷币是起卦无输赢，NONE 站得住）｜Content Rights＝Yes 有必要权利（底账：《周易》原文公有领域＋出处 JSON 在库；白话是自作；**Noto Serif SC 实测 name table ID 13 为 OFL 1.1 且无 Reserved Font Name**——所以 instance 静态字重后保留 Noto 原名合规，有 RFN 就违规了；開元通寶币面是运行时程序化烘焙）｜Subtitle`周易六爻 · 铜钱物理起卦`｜Keywords 93/100（不与名称副标题重复、逗号后不留空格、掺 4 个英文词覆盖中文圈外）｜Description 537 字｜Promotional Text 61 字。
   **「Add for Review」已激活**，材料齐备，等 Charlie 按提交。⚠️ 账号级 EU trader 横幅仍在——落已排除 EU-27 理论上不拦，但**只有真按提交才验得出**。
-  **未了**：`docs/index*.html` 的 OFL 致谢段落已写好但**未 push**（等 Charlie 过文案）；OFL 第 2 条要求随附许可证，目前仅存于 ttf name table。
+  OFL 致谢段落已补进支持页并上线（中英双语），OFL §2 的随附许可要求有了公开落点。
+  **⚡ 15:05 双线提交（Charlie 人在外面，授权代按）**：① **App Store 审核已提交**，状态 Waiting for Review，最长 48h。**提交前把发布方式从 `AFTER_APPROVAL` 改成 `MANUAL`** —— 否则会在 8/11–8/18 他失联期间自动上线、出问题无人响应。② **TestFlight 外部测试**：新建外部组「朋友」，加 build 1.0 (1)，填 Test Information（Beta 描述复用已批文案，联系方式同上，**Sign-in required 这里默认又是勾着的，再次取消**），提交 Beta App Review。③ **公开链接 https://testflight.apple.com/join/HbQ93fnd**（Open to Anyone，无人数上限）—— ⚠️ ASC 明示「Testers cannot join public link until this group has an approved build」，**Beta 审核通过后自动激活，无需再操作**。
+  **EU trader 悬案已解**：横幅仍在账号页，但**不影响提交**——落排除 EU-27 后一路畅通。
+  **坑（第三次遇到同一个）**：ASC 的富文本框是 `contenteditable` div，`execCommand('insertText')` 写进去 React 不认、界面仍空白；**必须走 devtools 的原生 fill**。另：`document.querySelector('[contenteditable]')` 会读到上一步残留的同类元素，**验证要靠截图不能靠 DOM 读数**。
 - 2026-07-10：朋友试用反馈「硬币正反不明显」→ 不动贴图，改 UI 读数：六爻落定后 hint 下显示本掷「阳 阳 阴」+ 爻堆每爻带三枚小字记录（castFaces 存进 VM，两处 View 显示）。顺带修出一个正反颠倒 bug：`PhysicsScene.face(of:)` 原来把字面朝上读成 heads/阳，与传统三钱法（**背为阳、字为阴**，Yao.swift 注释本来就这么写）相反，已翻转判定并订正相关注释。历史考证：开元通宝真钱背面就是光背，现有两面贴图无需改。截图 scaffold（-shot-tally）已 revert。
 - 2026-07-05：**首次真机运行成功**（免费 Personal Team 侧载，MacBook + iPhone"MKB"）。首测三反馈当晚修毕（#7 贴图缓存/预热、#8 摇一摇分级+多记一爻门闩、#9 斜靠重掷）。摇感常量（castMagnitude 2.4g、nudge 强度、vigor 封顶 1.8×）在 MotionService/PhysicsScene，待 Charlie 真机回归再调。
 

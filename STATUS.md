@@ -22,7 +22,7 @@
 - [x] #1 语料标点统一（`ship-blocker`）— 2026-07-04 完成，通行本轻标点，49 行
 - [x] #2 README 门面升级 — 2026-07-04 完成，v1 状态 + 三张截图
 - [x] #3 真机测试 + TestFlight — 2026-08-08 完成。真机装机 + TestFlight 内部测试全通
-- [ ] #4 App Store 上架准备 — **机械项已全做完，只剩文案与两个问卷**（详见下方 8/8 日志）
+- [ ] #4 App Store 上架准备 — **材料已全部填完，「Add for Review」已激活，等 Charlie 按提交**（详见下方 8/8 日志）
 - [ ] #5 LLM 解读层（远期）
 - [x] #6 再占后释文 toggle 不重置 — 2026-07-04 完成，一行重置
 - [x] #7 首次进 Ritual 卡 5 秒+（真机首测发现）— 2026-07-05 完成，贴图 static 缓存 + 启动预热
@@ -42,7 +42,9 @@
 - 2026-08-08（下午，接上条）：**上架材料 #4 推进，机械项清零。** ✅ 已完成：截图 4 张 6.9"（1320×2868，顺序＝铜钱／乾→姤释文／首页／掷币，6.5" 及以下由 Apple 自动缩放）｜定价免费 175 区域｜**上架区域 148，EU-27 全排除**（避开 DSA trader status ——个人开发者的住址会公开在欧盟区商店页）｜关掉 Apple Silicon Mac 上架（落靠摇一摇，Mac 无加速度计）｜App Privacy 问卷「Data Not Collected」**已 Publish**｜Privacy Policy URL + Support URL（见下）｜Copyright `2026 Hang Zong`｜审核联系方式｜build 1.0 (1) 已关联。
   **新增站点**：GitHub Pages 开在 `main` 分支 `/docs`，`charliezong18.github.io/luo/`（支持页）与 `/luo/privacy.html`（隐私政策），中英双语，配色取 DESIGN.md。隐私政策每条都对着代码核过（零网络 API／零追踪 SDK／零外部依赖／SwiftData 本地无 CloudKit／仅 NSMotion 权限）。
   **两个坑**：① `Sign-in required` 默认是**勾着**的，落无登录，不取消必被驳回。② 截图脚手架（`-shot-*` 启动参数 + `seedForScreenshot`）拍完已整块删除，**别让它进生产包**；下次要拍照抄这招：喂 `IChingRitualViewModel.appendThrow` 这个纯函数缝可以不跑物理直接摆出一卦。
-  **仍待办（需 Charlie 决定）**：Subtitle／Description／Keywords／Promotional Text 文案、Category 主次、Age Rating 问卷、Content Rights（《周易》原文属公有领域、Noto Serif SC 为 OFL，但这条是权利声明不代填）。⚠️ 账号级 EU trader 横幅仍在，是否真拦提交只有点提交才知道。
+  **同日稍后全部补齐**：Category＝Lifestyle（主）／Reference（次，随版本可改）｜Age Rating **4+**（7 步问卷全 NONE；第 6 步「概率类活动」查过定义——Apple 的 Simulated Gambling 指**下注博彩**，落掷币是起卦无输赢，NONE 站得住）｜Content Rights＝Yes 有必要权利（底账：《周易》原文公有领域＋出处 JSON 在库；白话是自作；**Noto Serif SC 实测 name table ID 13 为 OFL 1.1 且无 Reserved Font Name**——所以 instance 静态字重后保留 Noto 原名合规，有 RFN 就违规了；開元通寶币面是运行时程序化烘焙）｜Subtitle`周易六爻 · 铜钱物理起卦`｜Keywords 93/100（不与名称副标题重复、逗号后不留空格、掺 4 个英文词覆盖中文圈外）｜Description 537 字｜Promotional Text 61 字。
+  **「Add for Review」已激活**，材料齐备，等 Charlie 按提交。⚠️ 账号级 EU trader 横幅仍在——落已排除 EU-27 理论上不拦，但**只有真按提交才验得出**。
+  **未了**：`docs/index*.html` 的 OFL 致谢段落已写好但**未 push**（等 Charlie 过文案）；OFL 第 2 条要求随附许可证，目前仅存于 ttf name table。
 - 2026-07-10：朋友试用反馈「硬币正反不明显」→ 不动贴图，改 UI 读数：六爻落定后 hint 下显示本掷「阳 阳 阴」+ 爻堆每爻带三枚小字记录（castFaces 存进 VM，两处 View 显示）。顺带修出一个正反颠倒 bug：`PhysicsScene.face(of:)` 原来把字面朝上读成 heads/阳，与传统三钱法（**背为阳、字为阴**，Yao.swift 注释本来就这么写）相反，已翻转判定并订正相关注释。历史考证：开元通宝真钱背面就是光背，现有两面贴图无需改。截图 scaffold（-shot-tally）已 revert。
 - 2026-07-05：**首次真机运行成功**（免费 Personal Team 侧载，MacBook + iPhone"MKB"）。首测三反馈当晚修毕（#7 贴图缓存/预热、#8 摇一摇分级+多记一爻门闩、#9 斜靠重掷）。摇感常量（castMagnitude 2.4g、nudge 强度、vigor 封顶 1.8×）在 MotionService/PhysicsScene，待 Charlie 真机回归再调。
 

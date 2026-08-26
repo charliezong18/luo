@@ -132,7 +132,7 @@ struct IChingRitualView: View {
     }
 
     private var buttonLabel: String {
-        if vm.isComplete { return "再占" }
+        if vm.isComplete { return "再掷" }
         return "掷"
     }
 

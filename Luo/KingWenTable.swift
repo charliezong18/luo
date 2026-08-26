@@ -110,4 +110,9 @@ enum KingWenTable {
     static func info(forBits bits: Int) -> HexagramInfo {
         byBits[bits]!
     }
+
+    /// All 64 hexagrams in King Wen order, carrying the 6-bit key so a browser
+    /// can draw the lines without casting. Used by the 读经 library.
+    static let allInKingWenOrder: [(number: Int, name: String, bits: Int)] =
+        entries.map { (number: $0.0, name: $0.1, bits: $0.2.bits | ($0.3.bits << 3)) }
 }

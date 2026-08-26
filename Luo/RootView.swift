@@ -3,11 +3,13 @@ import SwiftUI
 /// Minimal Ritual switcher — the two v1 Rituals reachable from one screen.
 /// A real home is a later concern; this just makes both entries exist.
 struct RootView: View {
-    private enum Ritual { case coin, iching, castLog }
+    private enum Ritual { case sutra, coin, iching, castLog }
     @State private var ritual: Ritual?
 
     var body: some View {
         switch ritual {
+        case .sutra:
+            NavigationStack { SutraListView(onBack: { ritual = nil }) }
         case .coin:
             ritualContainer { CoinRitualView() }
         case .iching:
@@ -27,6 +29,7 @@ struct RootView: View {
                     .font(Theme.serif(64, weight: .medium))
                     .foregroundColor(Theme.ink)
                     .padding(.bottom, 12)
+                entryButton("读经") { ritual = .sutra }
                 entryButton("六爻") { ritual = .iching }
                 entryButton("掷币") { ritual = .coin }
                 entryButton("卦例记录") { ritual = .castLog }

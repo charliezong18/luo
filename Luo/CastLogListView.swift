@@ -30,7 +30,7 @@ struct CastLogListView: View {
                 .scrollContentBackground(.hidden)
             }
         }
-        .navigationTitle("占卜记录")
+        .navigationTitle("卦例记录")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: CastRecord.self) { CastLogDetailView(record: $0) }
         .toolbar {

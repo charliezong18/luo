@@ -2,8 +2,25 @@ import Foundation
 
 /// One of the 8 trigrams (bagua). `bits` encodes its 3 lines bottom→top,
 /// yang = 1 (bit 0 = bottom line).
-enum Trigram {
+enum Trigram: CaseIterable {
     case qian, dui, li, zhen, xun, kan, gen, kun
+
+    var name: String {
+        switch self {
+        case .qian: return "乾"
+        case .dui:  return "兑"
+        case .li:   return "离"
+        case .zhen: return "震"
+        case .xun:  return "巽"
+        case .kan:  return "坎"
+        case .gen:  return "艮"
+        case .kun:  return "坤"
+        }
+    }
+
+    /// 乾兑离震巽坎艮坤 — the row/column order of every printed 六十四卦 lookup
+    /// table (先天八卦次序). Same as declaration order.
+    static let tableOrder: [Trigram] = allCases
 
     var bits: Int {
         switch self {

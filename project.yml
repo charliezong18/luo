@@ -60,6 +60,21 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.charliezong.luoTests
         GENERATE_INFOPLIST_FILE: YES
 
+  # Simulator-driven checks of navigation (edge swipe-back) and the 读经 views.
+  # Kept in its own scheme so `-scheme Luo test` stays the fast unit run.
+  LuoUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: LuoUITests
+    dependencies:
+      - target: Luo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.charliezong.luoUITests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Luo
+
 schemes:
   Luo:
     build:
@@ -68,3 +83,10 @@ schemes:
     test:
       targets:
         - LuoTests
+  LuoUI:
+    build:
+      targets:
+        Luo: all
+    test:
+      targets:
+        - LuoUITests

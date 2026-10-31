@@ -37,21 +37,27 @@ struct SutraDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
+    /// Name, the six lines drawn as real bars (the same glyph the 卦象 table
+    /// uses, so what you tapped is what you see), and the 上/下卦 that make it —
+    /// the two coordinates for finding this hexagram in a printed table.
     private func header(_ hex: Hexagram) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             Text(hex.name)
                 .font(Theme.serif(34, weight: .medium))
                 .foregroundColor(Theme.ink)
-            VStack(spacing: 5) {
-                ForEach(Array(hex.yao.enumerated().reversed()), id: \.offset) { _, yao in
-                    Text(yao.glyph)
-                        .font(Theme.serif(30))
-                        .foregroundColor(Theme.ink)
-                }
+            LinesGlyph(bits: hex.presentBits, width: 72, thickness: 6, spacing: 9)
+            if let upper = trigram(hex.presentBits >> 3), let lower = trigram(hex.presentBits & 0b111) {
+                Text("上\(upper.name)　下\(lower.name)")
+                    .font(Theme.serif(13))
+                    .foregroundColor(Theme.ink.opacity(0.5))
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.bottom, 8)
+    }
+
+    private func trigram(_ bits: Int) -> Trigram? {
+        Trigram.allCases.first { $0.bits == bits }
     }
 
     /// 原文 on top, 白话 indented and dimmed beneath — the same two-layer

@@ -2,9 +2,9 @@ import SwiftUI
 import SwiftData
 
 /// The Cast Log: past I Ching Casts, newest first. Rows push to detail; swipe to
-/// delete one; 清空 (confirmed) deletes all.
+/// delete one; 清空 (confirmed) deletes all. Pushed from the home stack, so the
+/// system back button / edge swipe handle leaving.
 struct CastLogListView: View {
-    var onBack: () -> Void
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CastRecord.timestamp, order: .reverse) private var records: [CastRecord]
     @State private var confirmClear = false
@@ -33,11 +33,8 @@ struct CastLogListView: View {
         .navigationTitle("卦例记录")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: CastRecord.self) { CastLogDetailView(record: $0) }
+        .toolbar(.visible, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button(action: onBack) { Image(systemName: "chevron.left") }
-                    .tint(Theme.cinnabar)
-            }
             if !records.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("清空") { confirmClear = true }.tint(Theme.cinnabar)

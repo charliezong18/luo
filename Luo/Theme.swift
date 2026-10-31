@@ -9,6 +9,10 @@ enum Theme {
     static let ink = Color(red: 0.925, green: 0.890, blue: 0.824)
     /// tertiary #DC6A4B — earthen cinnabar accent (one per screen).
     static let cinnabar = Color(red: 0.863, green: 0.416, blue: 0.294)
+    /// surface-raised #211B14 — the desk lifted a few millimetres (rows, panels).
+    static let surfaceRaised = Color(red: 0.129, green: 0.106, blue: 0.078)
+    /// hairline #37291A — the only border color, at one pixel.
+    static let hairline = Color(red: 0.216, green: 0.161, blue: 0.102)
 
     /// Serif face for Hanzi/result glyphs. Bundled Noto Serif SC (two static
     /// weights instanced from the variable font). We reference each face by its

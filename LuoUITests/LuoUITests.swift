@@ -82,10 +82,48 @@ final class LuoUITests: XCTestCase {
         // 初九 动 → 变卦 升 (#46).
         app.buttons["changing.1"].tap()
         XCTAssertTrue(app.staticTexts["升"].waitForExistence(timeout: 3), "泰 初九动 should show 变卦 升")
+        // 本卦 lines carry the 动爻 mark (cinnabar ring); 变卦 is static.
+        let present = app.descendants(matching: .any)["pair.lines.present"]
+        XCTAssertTrue(present.waitForExistence(timeout: 3), "本卦 line glyph not found")
+        XCTAssertTrue(present.label.contains("动爻：初爻"), "本卦 should mark 初爻 动, got: \(present.label)")
+        let resulting = app.descendants(matching: .any)["pair.lines.resulting"]
+        XCTAssertTrue(resulting.exists, "变卦 line glyph not found")
+        XCTAssertTrue(resulting.label.contains("无动爻"), "变卦 should be static, got: \(resulting.label)")
         snap("03-lookup")
         app.buttons["读本卦 泰"].tap()
         XCTAssertTrue(app.navigationBars["第 11 卦"].waitForExistence(timeout: 5), "读本卦 did not open the detail")
         swipeBackFromLeftEdge()
         XCTAssertTrue(app.buttons["line.1"].waitForExistence(timeout: 5), "swipe did not return to lookup")
+    }
+
+    /// Six real throws through the 掷 button → the 本卦/变卦 result renders with
+    /// the line glyphs; the auto-saved Cast then opens in 卦例记录 detail.
+    func testRitualResultAndCastLogDetailShowLineGlyphs() {
+        app.buttons["六爻"].tap()
+        let cast = app.buttons["掷"]
+        XCTAssertTrue(cast.waitForExistence(timeout: 8), "六爻 did not open")
+        for i in 1...6 {
+            let ready = NSPredicate { _, _ in cast.exists && cast.isEnabled }
+            let exp = expectation(for: ready, evaluatedWith: nil)
+            wait(for: [exp], timeout: 30)
+            XCTAssertTrue(cast.isEnabled, "掷 not ready for throw \(i)")
+            cast.tap()
+        }
+        XCTAssertTrue(app.buttons["再掷"].waitForExistence(timeout: 30), "cast did not complete after 6 throws")
+        let present = app.descendants(matching: .any)["pair.lines.present"]
+        XCTAssertTrue(present.waitForExistence(timeout: 5), "result 本卦 line glyph not found")
+        snap("04-ritual-result")
+
+        swipeBackFromLeftEdge()
+        XCTAssertTrue(app.buttons["卦例记录"].waitForExistence(timeout: 5))
+        app.buttons["卦例记录"].tap()
+        XCTAssertTrue(app.navigationBars["卦例记录"].waitForExistence(timeout: 5))
+        let firstRow = app.cells.firstMatch
+        XCTAssertTrue(firstRow.waitForExistence(timeout: 5), "auto-saved cast not in 卦例记录")
+        firstRow.tap()
+        XCTAssertTrue(app.navigationBars["卦记"].waitForExistence(timeout: 5), "卦记 detail did not open")
+        XCTAssertTrue(app.descendants(matching: .any)["pair.lines.present"].waitForExistence(timeout: 5),
+                      "卦记 本卦 line glyph not found")
+        snap("05-castlog-detail")
     }
 }

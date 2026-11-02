@@ -15,12 +15,12 @@ struct HexagramPairView: View {
                 .foregroundColor(Theme.ink.opacity(0.6))
 
             HStack(alignment: .center, spacing: 18) {
-                hexagramColumn(hexagram)
+                hexagramColumn(hexagram, role: "本卦")
                 if let resulting = hexagram.resultingHexagram {
                     Text("→")
                         .font(Theme.serif(30))
                         .foregroundColor(Theme.ink.opacity(0.5))
-                    hexagramColumn(resulting)
+                    hexagramColumn(resulting, role: "变卦")
                 }
             }
 
@@ -35,28 +35,47 @@ struct HexagramPairView: View {
         }
     }
 
+    private static let positionNames = ["初", "二", "三", "四", "五", "上"]
+
+    /// One line drawn with the same shape renderer as the 卦象 grid / 查卦 input
+    /// (`LinesGlyph`), in ink. A 动爻 gets a cinnabar ring beside it; the ring
+    /// slot is always reserved so the lines in a column stay aligned.
     private func yaoRow(_ yao: Yao) -> some View {
         HStack(spacing: 10) {
-            Text(yao.glyph)
-                .font(Theme.serif(30))
-                .foregroundColor(Theme.ink)
-            if yao.isChanging {
-                Circle().stroke(Theme.cinnabar, lineWidth: 1.5).frame(width: 8, height: 8)
-            }
+            LinesGlyph(bits: yao.isYang ? 1 : 0, lineCount: 1,
+                       width: 48, thickness: 6, spacing: 0)
+            Circle().stroke(Theme.cinnabar, lineWidth: 1.5)
+                .frame(width: 8, height: 8)
+                .opacity(yao.isChanging ? 1 : 0)
         }
+        .frame(height: 14)
     }
 
-    private func hexagramColumn(_ hex: Hexagram) -> some View {
-        VStack(spacing: 8) {
+    private func hexagramColumn(_ hex: Hexagram, role: String) -> some View {
+        VStack(spacing: 10) {
             Text(hex.name)
                 .font(Theme.serif(30, weight: .medium))
                 .foregroundColor(Theme.ink)
-            VStack(spacing: 5) {
+            VStack(spacing: 2) {
                 ForEach(Array(hex.yao.enumerated().reversed()), id: \.offset) { _, yao in
                     yaoRow(yao)
                 }
             }
+            // Keep the column visually centred despite the ring slot on the right.
+            .padding(.leading, 18)
+            .accessibilityElement(children: .ignore)
+            .accessibilityIdentifier("pair.lines.\(role == "本卦" ? "present" : "resulting")")
+            .accessibilityLabel(linesLabel(hex, role: role))
         }
+    }
+
+    /// e.g. "本卦 泰，动爻：初爻" / "变卦 升，无动爻".
+    private func linesLabel(_ hex: Hexagram, role: String) -> String {
+        let changing = hex.changingPositions
+        let tail = changing.isEmpty
+            ? "无动爻"
+            : "动爻：" + changing.map { Self.positionNames[$0 - 1] + "爻" }.joined(separator: "、")
+        return "\(role) \(hex.name)，\(tail)"
     }
 
     @ViewBuilder private func canonicalText(_ hex: Hexagram) -> some View {
